@@ -12,15 +12,13 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 
 // =========================
-// CORS CONFIG (CORRIGIDO)
+// CORS (CORRETO PARA PRODUÇÃO)
 // =========================
 app.use(cors({
     origin: 'https://recapadorasaas.onrender.com',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-app.options('*', cors());
 
 // =========================
 // MIDDLEWARE
@@ -54,7 +52,7 @@ const frontendPath = path.join(__dirname, '../../frontend');
 app.use(express.static(frontendPath));
 
 // =========================
-// ROTA PRINCIPAL DO SITE
+// ROTA PRINCIPAL
 // =========================
 app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'login.html'));
