@@ -9,6 +9,8 @@ function getPerfil() {
     return localStorage.getItem("perfil");
 }
 
+const API = "/api";
+
 let bandasCache = [];
 
 async function carregarBandas() {
@@ -182,8 +184,13 @@ async function entradaEstoque(id) {
         });
 
         const dados = await resposta.json();
-        alert(dados.mensagem || "Entrada registrada");
 
+        if (!resposta.ok) {
+            alert(dados.mensagem || "Erro ao registrar entrada");
+            return;
+        }
+
+        alert(dados.mensagem || "Entrada registrada");
         carregarBandas();
 
     } catch (error) {
@@ -210,8 +217,13 @@ async function alterarStatus(id) {
         });
 
         const dados = await resposta.json();
-        alert(dados.mensagem || "Status alterado com sucesso");
 
+        if (!resposta.ok) {
+            alert(dados.mensagem || "Erro ao alterar status");
+            return;
+        }
+
+        alert(dados.mensagem || "Status alterado com sucesso");
         carregarBandas();
 
     } catch (error) {
