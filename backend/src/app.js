@@ -14,15 +14,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/**
- * FRONTEND ESTÁTICO
- * Serve os arquivos HTML/CSS/JS da pasta frontend
- */
+// se quiser servir frontend pelo backend também, pode deixar
 app.use(express.static(path.join(__dirname, '../../frontend')));
 
-/**
- * ROTAS DA API
- */
 app.use('/api/auth', authRoutes);
 app.use('/api/teste', testeRoutes);
 app.use('/api/bandas', bandaRoutes);
@@ -30,22 +24,11 @@ app.use('/api/movimentacoes', movimentacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/producao', producaoRoutes);
 
-/**
- * ROTA DE STATUS DA API
- */
-app.get('/api', (req, res) => {
+app.get('/', (req, res) => {
     res.json({
         sistema: 'Recapadora SaaS',
         status: 'Online'
     });
-});
-
-/**
- * ROTA PRINCIPAL
- * Abre o login automaticamente
- */
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/login.html'));
 });
 
 module.exports = app;
