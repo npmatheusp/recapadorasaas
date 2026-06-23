@@ -47,11 +47,4 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'login.html'));
 });
 
-// =========================
-// FALLBACK PARA OUTRAS PÁGINAS HTML
-// =========================
-app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'login.html'));
-});
-
 module.exports = app;
