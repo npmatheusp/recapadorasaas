@@ -14,9 +14,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// se quiser servir frontend pelo backend também, pode deixar
-app.use(express.static(path.join(__dirname, '../../frontend')));
-
+// =========================
+// ROTAS DA API
+// =========================
 app.use('/api/auth', authRoutes);
 app.use('/api/teste', testeRoutes);
 app.use('/api/bandas', bandaRoutes);
@@ -24,11 +24,34 @@ app.use('/api/movimentacoes', movimentacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/producao', producaoRoutes);
 
-app.get('/', (req, res) => {
+// =========================
+// STATUS DA API
+// =========================
+app.get('/api/status', (req, res) => {
     res.json({
         sistema: 'Recapadora SaaS',
         status: 'Online'
     });
+});
+
+// =========================
+// FRONTEND ESTÁTICO
+// =========================
+const frontendPath = path.join(__dirname, '../../frontend');
+app.use(express.static(frontendPath));
+
+// =========================
+// ROTA PRINCIPAL DO SITE
+// =========================
+app.get('/', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'login.html'));
+});
+
+// =========================
+// FALLBACK PARA OUTRAS PÁGINAS HTML
+// =========================
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'login.html'));
 });
 
 module.exports = app;
