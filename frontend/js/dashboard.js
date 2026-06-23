@@ -1,7 +1,7 @@
 const token = localStorage.getItem('token');
 
 // 🔥 ALTERE AQUI PARA O SEU BACKEND NO RENDER
-const API_URL = 'https://SEU-BACKEND.onrender.com';
+const API_URL = 'https://recapadorasaas.onrender.com/api';
 
 if (!token) {
     window.location.href = 'login.html';
