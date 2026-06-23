@@ -11,6 +11,8 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
+const cors = require('cors');
+
 app.use(cors({
     origin: 'https://recapadorasaas.onrender.com',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
