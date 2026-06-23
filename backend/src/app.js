@@ -12,30 +12,9 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 
 // =========================
-// CORS (CORRETO PARA PRODUÇÃO)
-// =========================
-app.use(cors({
-    origin: 'https://recapadorasaas.onrender.com',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// 🔥 IMPORTANTE: garante preflight funcionando em todas rotas
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://recapadorasaas.onrender.com');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-
-    next();
-});
-
-// =========================
 // MIDDLEWARE
 // =========================
+app.use(cors());
 app.use(express.json());
 
 // =========================

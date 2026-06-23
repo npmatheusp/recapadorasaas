@@ -1,45 +1,40 @@
 const token = localStorage.getItem('token');
 
-// 🔥 COLOQUE A URL REAL DO SEU BACKEND AQUI
-const API_URL = 'https://recapadorasaas-api.onrender.com';
-
 if (!token) {
     window.location.href = 'login.html';
 }
 
 async function carregarDashboard() {
-
     try {
-
-        const response = await fetch(
-            `${API_URL}/api/dashboard`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+        const response = await fetch('/api/dashboard', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
-        );
+        });
+
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('perfil');
+            localStorage.removeItem('usuario');
+            window.location.href = 'login.html';
+            return;
+        }
 
         if (!response.ok) {
-            throw new Error('Erro ao carregar dashboard');
+            const erro = await response.text();
+            throw new Error(`Erro ao carregar dashboard: ${response.status} - ${erro}`);
         }
 
         const data = await response.json();
 
-        document.getElementById('totalEstoque').textContent =
-            data.totalEstoque || 0;
+        document.getElementById('totalEstoque').textContent = data.totalEstoque || 0;
+        document.getElementById('producoesHoje').textContent = data.producoesHoje || 0;
+        document.getElementById('producoesMes').textContent = data.producoesMes || 0;
 
-        document.getElementById('producoesHoje').innerText =
-            data.producoesHoje || 0;
-
-        document.getElementById('producoesMes').innerText =
-            data.producoesMes || 0;
-
-        const tbody =
-            document.getElementById('ultimasProducoes');
-
-        const producoes =
-            data.ultimasProducoes || [];
+        const tbody = document.getElementById('ultimasProducoes');
+        const producoes = data.ultimasProducoes || [];
 
         tbody.innerHTML = producoes.length
             ? producoes.map(p => `
@@ -66,12 +61,9 @@ async function carregarDashboard() {
 carregarDashboard();
 setInterval(carregarDashboard, 5000);
 
-// LOGOUT
 window.logout = function () {
-
     localStorage.removeItem('token');
     localStorage.removeItem('perfil');
     localStorage.removeItem('usuario');
-
     window.location.href = 'login.html';
 };
