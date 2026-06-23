@@ -1,7 +1,7 @@
 const token = localStorage.getItem('token');
 
-// 🔥 ALTERE AQUI PARA O SEU BACKEND NO RENDER
-const API_URL = 'https://recapadorasaas.onrender.com/';
+// 🔥 COLOQUE A URL REAL DO SEU BACKEND AQUI
+const API_URL = 'https://recapadorasaas-api.onrender.com';
 
 if (!token) {
     window.location.href = 'login.html';
@@ -44,18 +44,10 @@ async function carregarDashboard() {
         tbody.innerHTML = producoes.length
             ? producoes.map(p => `
                 <tr>
-                    <td>
-                        ${new Date(p.criado_em).toLocaleString('pt-BR')}
-                    </td>
-                    <td>
-                        ${p.codigo}
-                    </td>
-                    <td>
-                        ${p.descricao}
-                    </td>
-                    <td>
-                        ${p.quantidade}
-                    </td>
+                    <td>${new Date(p.criado_em).toLocaleString('pt-BR')}</td>
+                    <td>${p.codigo}</td>
+                    <td>${p.descricao}</td>
+                    <td>${p.quantidade}</td>
                 </tr>
             `).join('')
             : `
@@ -72,7 +64,6 @@ async function carregarDashboard() {
 }
 
 carregarDashboard();
-
 setInterval(carregarDashboard, 5000);
 
 // LOGOUT
