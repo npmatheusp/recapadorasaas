@@ -11,8 +11,9 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-const cors = require('cors');
-
+// =========================
+// CORS CONFIG (CORRIGIDO)
+// =========================
 app.use(cors({
     origin: 'https://recapadorasaas.onrender.com',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -20,6 +21,10 @@ app.use(cors({
 }));
 
 app.options('*', cors());
+
+// =========================
+// MIDDLEWARE
+// =========================
 app.use(express.json());
 
 // =========================
