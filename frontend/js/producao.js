@@ -1,5 +1,3 @@
-const API = "/api";
-
 let bandasCache = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', registrarProducao);
     }
 });
+
 
 // =========================
 // SESSÃO
@@ -37,6 +36,7 @@ function validarSessao() {
         window.location.href = 'login.html';
     }
 }
+
 
 // =========================
 // CARREGAR BANDAS
@@ -66,6 +66,7 @@ async function carregarBandas() {
         alert('Erro ao carregar bandas');
     }
 }
+
 
 // =========================
 // BUSCA DE BANDAS
@@ -163,6 +164,7 @@ function selecionarBanda(id) {
     }
 }
 
+
 // =========================
 // CARREGAR HISTÓRICO
 // =========================
@@ -216,6 +218,7 @@ async function carregarHistorico() {
         alert('Erro ao carregar histórico');
     }
 }
+
 
 // =========================
 // REGISTRAR PRODUÇÃO
@@ -287,6 +290,7 @@ async function registrarProducao(e) {
         alert('Erro ao registrar produção');
     }
 }
+
 
 // =========================
 // NAVEGAÇÃO
