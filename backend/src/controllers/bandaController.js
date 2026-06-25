@@ -354,7 +354,7 @@ function desenharCabecalhoPagina(doc, dataHora) {
         });
 
     doc.y = 120;
-}
+};
 
 // ======================================================
 // TABELA
@@ -477,14 +477,14 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // ✔️ PAGINAÇÃO FINAL CORRIGIDA (SEM DESALINHAR)
+        // ✔️ PAGINAÇÃO CORRIGIDA (FIXA NO RODAPÉ REAL)
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
 
-            const bottomY = doc.page.height - doc.page.margins.bottom + 10;
+            const bottomY = doc.page.height - 25; // FIXO (não depende de margem)
 
             doc.font('Helvetica')
                 .fontSize(9)
