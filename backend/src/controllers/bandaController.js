@@ -449,8 +449,7 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         const doc = new PDFDocument({
             size: 'A4',
-            margin: 40,
-            bufferPages: true
+            margin: 40
         });
 
         doc.pipe(res);
@@ -477,14 +476,12 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // ✔️ PAGINAÇÃO FINAL CORRIGIDA (SEM DESALINHAR)
+        // ✔️ FIX DEFINITIVO DA PAGINAÇÃO
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
-
-            const bottomY = doc.page.height - doc.page.margins.bottom + 10;
 
             doc.font('Helvetica')
                 .fontSize(9)
@@ -492,7 +489,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    bottomY,
+                    doc.page.height - 40,
                     {
                         width: doc.page.width - 80,
                         align: 'center'
