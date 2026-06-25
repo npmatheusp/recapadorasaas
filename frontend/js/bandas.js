@@ -130,45 +130,24 @@ async function gerarPdfEstoque() {
         }
 
         const resposta = await fetch(`${API}/bandas/pdf`, {
-            method: "GET",
+            method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`
             }
         });
 
-        if (resposta.status === 401) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("perfil");
-            localStorage.removeItem("usuario");
-            alert("Sessão expirada. Faça login novamente.");
-            window.location.href = "login.html";
-            return;
-        }
-
         if (!resposta.ok) {
-            let mensagem = "Erro ao gerar PDF";
-            try {
-                const erro = await resposta.json();
-                mensagem = erro.mensagem || mensagem;
-            } catch (_) {}
-            throw new Error(mensagem);
+            const erro = await resposta.json().catch(() => ({}));
+            throw new Error(erro.mensagem || 'Erro ao gerar PDF');
         }
 
         const blob = await resposta.blob();
         const url = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "estoque-bandas.pdf";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        window.URL.revokeObjectURL(url);
+        window.open(url, '_blank');
 
     } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
-        alert(error.message || "Erro ao gerar PDF");
+        console.error('Erro ao gerar PDF:', error);
+        alert(error.message || 'Erro ao gerar PDF do estoque');
     }
 }
 

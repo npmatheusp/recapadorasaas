@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const PDFDocument = require('pdfkit');
 
 exports.listar = async (req, res) => {
     try {
@@ -264,7 +265,170 @@ exports.disponibilidade = async (req, res) => {
 };
 
 exports.gerarPdfEstoque = async (req, res) => {
-   // consulta bandas
-   // gera pdf
-   // envia download
+    try {
+        const [bandas] = await pool.execute(`
+            SELECT
+                codigo,
+                descricao,
+                estoque_total,
+                estoque_minimo,
+                ativo
+            FROM bandas
+            WHERE ativo = TRUE
+            ORDER BY codigo
+        `);
+
+        const doc = new PDFDocument({
+            margin: 40,
+            size: 'A4'
+        });
+
+        const nomeArquivo = `estoque-bandas-${Date.now()}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+            'Content-Disposition',
+            `inline; filename="${nomeArquivo}"`
+        );
+
+        doc.pipe(res);
+
+        // =========================
+        // CABEÇALHO
+        // =========================
+        doc
+            .fontSize(18)
+            .text('Relatório de Estoque de Bandas', {
+                align: 'center'
+            });
+
+        doc.moveDown(0.5);
+
+        doc
+            .fontSize(10)
+            .text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, {
+                align: 'center'
+            });
+
+        doc.moveDown(1.5);
+
+        // =========================
+        // RESUMO
+        // =========================
+        const totalItens = bandas.reduce(
+            (acc, item) => acc + Number(item.estoque_total || 0),
+            0
+        );
+
+        doc
+            .fontSize(12)
+            .text(`Total de bandas cadastradas ativas: ${bandas.length}`);
+
+        doc
+            .fontSize(12)
+            .text(`Total geral em estoque: ${totalItens}`);
+
+        doc.moveDown(1);
+
+        // =========================
+        // TABELA
+        // =========================
+        const startX = 40;
+        let y = doc.y + 10;
+
+        const colCodigo = startX;
+        const colDescricao = 120;
+        const colEstoque = 350;
+        const colMinimo = 430;
+        const colStatus = 500;
+
+        // Cabeçalho da tabela
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Código', colCodigo, y);
+        doc.text('Descrição', colDescricao, y);
+        doc.text('Estoque', colEstoque, y);
+        doc.text('Mínimo', colMinimo, y);
+        doc.text('Status', colStatus, y);
+
+        y += 20;
+
+        doc.moveTo(startX, y - 5).lineTo(560, y - 5).stroke();
+
+        doc.font('Helvetica');
+
+        if (bandas.length === 0) {
+            doc.text('Nenhuma banda cadastrada.', startX, y + 10);
+        } else {
+            for (const banda of bandas) {
+                // quebra de página
+                if (y > 750) {
+                    doc.addPage();
+                    y = 50;
+
+                    doc.fontSize(10).font('Helvetica-Bold');
+                    doc.text('Código', colCodigo, y);
+                    doc.text('Descrição', colDescricao, y);
+                    doc.text('Estoque', colEstoque, y);
+                    doc.text('Mínimo', colMinimo, y);
+                    doc.text('Status', colStatus, y);
+
+                    y += 20;
+                    doc.moveTo(startX, y - 5).lineTo(560, y - 5).stroke();
+                    doc.font('Helvetica');
+                }
+
+                const descricao = banda.descricao || '-';
+                const estoque = Number(banda.estoque_total || 0);
+                const minimo = Number(banda.estoque_minimo || 0);
+                const status = banda.ativo ? 'Ativo' : 'Inativo';
+
+                doc.fontSize(10);
+                doc.text(String(banda.codigo || ''), colCodigo, y, {
+                    width: 70
+                });
+
+                doc.text(descricao, colDescricao, y, {
+                    width: 210
+                });
+
+                doc.text(String(estoque), colEstoque, y, {
+                    width: 50
+                });
+
+                doc.text(String(minimo), colMinimo, y, {
+                    width: 50
+                });
+
+                doc.text(status, colStatus, y, {
+                    width: 50
+                });
+
+                y += 22;
+            }
+        }
+
+        doc.moveDown(2);
+
+        // =========================
+        // RODAPÉ
+        // =========================
+        doc.moveTo(startX, y + 10).lineTo(560, y + 10).stroke();
+
+        doc
+            .fontSize(9)
+            .text(
+                'Relatório gerado automaticamente pelo sistema Recapadora SaaS.',
+                startX,
+                y + 20,
+                { align: 'center' }
+            );
+
+        doc.end();
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF do estoque:', error);
+        return res.status(500).json({
+            mensagem: 'Erro ao gerar PDF do estoque'
+        });
+    }
 };

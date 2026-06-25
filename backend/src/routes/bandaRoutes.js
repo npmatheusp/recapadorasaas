@@ -3,14 +3,23 @@ const router = express.Router();
 
 const auth = require('../middlewares/auth');
 const permissao = require('../middlewares/permissao');
-
 const bandaController = require('../controllers/bandaController');
 
-// LISTAR TODAS
-router.get('/', auth, permissao('ADMIN', 'VENDEDOR'), bandaController.listar);
+// LISTAR
+router.get(
+    '/',
+    auth,
+    permissao('ADMIN', 'VENDEDOR'),
+    bandaController.listar
+);
 
-// RELATÓRIO PDF -> TEM QUE VIR ANTES DE /:id
-router.get('/pdf', auth, permissao('ADMIN', 'VENDEDOR'), bandaController.gerarPdfEstoque);
+// PDF DO ESTOQUE
+router.get(
+    '/pdf',
+    auth,
+    permissao('ADMIN', 'VENDEDOR'),
+    bandaController.gerarPdfEstoque
+);
 
 // DISPONIBILIDADE
 router.get(
@@ -21,21 +30,51 @@ router.get(
 );
 
 // BUSCAR POR ID
-router.get('/:id', auth, permissao('ADMIN', 'VENDEDOR'), bandaController.buscarPorId);
+router.get(
+    '/:id',
+    auth,
+    permissao('ADMIN', 'VENDEDOR'),
+    bandaController.buscarPorId
+);
 
 // CADASTRAR
-router.post('/', auth, permissao('ADMIN'), bandaController.cadastrar);
+router.post(
+    '/',
+    auth,
+    permissao('ADMIN'),
+    bandaController.cadastrar
+);
 
 // EDITAR
-router.put('/:id', auth, permissao('ADMIN'), bandaController.editar);
+router.put(
+    '/:id',
+    auth,
+    permissao('ADMIN'),
+    bandaController.editar
+);
 
 // ENTRADA DE ESTOQUE
-router.put('/:id/entrada', auth, permissao('ADMIN'), bandaController.entradaEstoque);
+router.put(
+    '/:id/entrada',
+    auth,
+    permissao('ADMIN'),
+    bandaController.entradaEstoque
+);
 
-// EXCLUIR
-router.delete('/:id', auth, permissao('ADMIN'), bandaController.excluir);
+// EXCLUIR / DESATIVAR
+router.delete(
+    '/:id',
+    auth,
+    permissao('ADMIN'),
+    bandaController.excluir
+);
 
 // ALTERAR STATUS
-router.patch('/:id/status', auth, permissao('ADMIN'), bandaController.alterarStatus);
+router.patch(
+    '/:id/status',
+    auth,
+    permissao('ADMIN'),
+    bandaController.alterarStatus
+);
 
 module.exports = router;
