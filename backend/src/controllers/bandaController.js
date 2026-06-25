@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const PDFDocument = require('pdfkit');
 
 // ======================================================
-// LISTAR (igual)
+// LISTAR
 // ======================================================
 exports.listar = async (req, res) => {
     try {
@@ -37,14 +37,14 @@ function extrairGrupoBanda(codigo = '') {
 }
 
 function garantirEspaco(doc, altura = 80) {
-    const limite = doc.page.height - doc.page.margins.bottom;
+    const limite = doc.page.height - doc.page.margins.bottom - 40;
     if (doc.y + altura > limite) {
         doc.addPage();
     }
 }
 
 // ======================================================
-// CABEÇALHO
+// CABEÇALHO (SEM ALTERAR SUA IDEIA)
 // ======================================================
 function desenharCabecalhoPagina(doc, dataHora) {
     const largura = doc.page.width;
@@ -85,74 +85,91 @@ function desenharCabecalhoPagina(doc, dataHora) {
 // ======================================================
 // TABELA
 // ======================================================
-function desenharCabecalhoTabela(doc, x, largura) {
+function desenharCabecalhoTabela(doc) {
+    garantirEspaco(doc, 40);
 
+    const x = 40;
     const y = doc.y;
+    const largura = doc.page.width - 80;
 
-    const colCodigo = largura * 0.65;
-    const colEstoque = largura * 0.20;
-    const colAtivo = largura * 0.15;
+    const colCodigo = 260;
+    const colEstoque = 120;
+    const colAtivo = largura - colCodigo - colEstoque;
 
-    doc.rect(x, y, largura, 22).fill('#dfe8f3');
+    doc.rect(x, y, largura, 25).fill('#dfe8f3');
 
     doc.fillColor('#0b2c66')
         .font('Helvetica-Bold')
-        .fontSize(9);
+        .fontSize(10);
 
-    doc.text('Código / Descrição', x + 5, y + 6, { width: colCodigo - 10 });
-    doc.text('Estoque', x + colCodigo, y + 6, { width: colEstoque, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colEstoque, y + 6, { width: colAtivo, align: 'center' });
+    doc.text('Código / Descrição', x + 8, y + 7, {
+        width: colCodigo - 10
+    });
 
-    doc.y = y + 22;
+    doc.text('Estoque Total', x + colCodigo + 8, y + 7, {
+        width: colEstoque - 10,
+        align: 'center'
+    });
+
+    doc.text('Ativo', x + colCodigo + colEstoque + 8, y + 7, {
+        width: colAtivo - 10,
+        align: 'center'
+    });
+
+    doc.y = y + 25;
 }
 
-function desenharLinhaTabela(doc, item, x, largura, zebra) {
+function desenharLinhaTabela(doc, item, zebra = false) {
+    garantirEspaco(doc, 28);
 
-    garantirEspaco(doc, 22);
-
+    const x = 40;
     const y = doc.y;
+    const largura = doc.page.width - 80;
 
-    const colCodigo = largura * 0.65;
-    const colEstoque = largura * 0.20;
-    const colAtivo = largura * 0.15;
+    const colCodigo = 260;
+    const colEstoque = 120;
+    const colAtivo = largura - colCodigo - colEstoque;
 
     if (zebra) {
-        doc.rect(x, y, largura, 22).fill('#f7f9fc');
+        doc.rect(x, y, largura, 28).fill('#f7f9fc');
     }
 
-    doc.moveTo(x, y + 22)
-        .lineTo(x + largura, y + 22)
+    doc.moveTo(x, y + 28)
+        .lineTo(x + largura, y + 28)
         .strokeColor('#ddd')
         .stroke();
 
-    doc.fillColor('#222').font('Helvetica').fontSize(8.5);
+    doc.fillColor('#222')
+        .font('Helvetica')
+        .fontSize(10);
 
     const texto = item.descricao
         ? `${item.codigo} - ${item.descricao}`
         : item.codigo;
 
-    doc.text(texto, x + 5, y + 6, { width: colCodigo - 10 });
+    doc.text(texto, x + 8, y + 8, {
+        width: colCodigo - 10
+    });
 
     doc.text(String(item.estoque_total || 0),
-        x + colCodigo,
-        y + 6,
-        { width: colEstoque, align: 'center' }
+        x + colCodigo + 8,
+        y + 8,
+        { width: colEstoque - 10, align: 'center' }
     );
 
     doc.text(item.ativo ? 'Sim' : 'Não',
-        x + colCodigo + colEstoque,
-        y + 6,
-        { width: colAtivo, align: 'center' }
+        x + colCodigo + colEstoque + 8,
+        y + 8,
+        { width: colAtivo - 10, align: 'center' }
     );
 
-    doc.y = y + 22;
+    doc.y = y + 28;
 }
 
 // ======================================================
-// PDF PRINCIPAL (2 COLUNAS)
+// PDF PRINCIPAL
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
-
     try {
         const [bandas] = await pool.execute(`
             SELECT id, codigo, descricao, estoque_total, ativo
@@ -185,43 +202,26 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPagina(doc, dataHora);
 
-        // COLUNAS DA PÁGINA
-        const margem = 40;
-        const larguraTotal = doc.page.width - margem * 2;
-        const colunaLargura = larguraTotal / 2 - 10;
+        ordenados.forEach((grupo) => {
 
-        let coluna = 0;
-
-        ordenados.forEach((grupo, i) => {
-
-            const x = margem + (coluna * (colunaLargura + 20));
-
-            garantirEspaco(doc, 120);
+            garantirEspaco(doc, 100);
 
             doc.font('Helvetica-Bold')
-                .fontSize(11)
+                .fontSize(13)
                 .fillColor('#0b2c66')
-                .text(`BANDA: ${grupo}`, x, doc.y);
+                .text(`BANDA: ${grupo}`, 40);
 
-            doc.y += 15;
-
-            desenharCabecalhoTabela(doc, x, colunaLargura);
+            desenharCabecalhoTabela(doc);
 
             grupos[grupo].forEach((item, idx) => {
-                desenharLinhaTabela(doc, item, x, colunaLargura, idx % 2 !== 0);
+                desenharLinhaTabela(doc, item, idx % 2 !== 0);
             });
 
-            coluna++;
-
-            // troca de linha (2 colunas)
-            if (coluna > 1) {
-                coluna = 0;
-                doc.y += 20;
-            }
+            doc.moveDown(1);
         });
 
         // ==================================================
-        // PAGINAÇÃO CORRIGIDA (RODAPÉ FIXO)
+        // PAGINAÇÃO CORRIGIDA (SEM SOBREPOSIÇÃO)
         // ==================================================
         const range = doc.bufferedPageRange();
 
@@ -234,8 +234,11 @@ exports.gerarPdfEstoque = async (req, res) => {
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    doc.page.height - 30,
-                    { width: doc.page.width - 80, align: 'center' }
+                    doc.page.height - 35,
+                    {
+                        width: doc.page.width - 80,
+                        align: 'center'
+                    }
                 );
         }
 
