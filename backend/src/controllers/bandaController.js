@@ -294,9 +294,8 @@ exports.disponibilidade = async (req, res) => {
 };
 
 // ======================================================
-// PDF HELPERS
+// HELPERS PDF
 // ======================================================
-
 function formatarDataHoraBR() {
     return new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
@@ -319,14 +318,13 @@ function garantirEspaco(doc, altura = 80) {
 }
 
 // ======================================================
-// CABEÇALHO (AJUSTADO SEM QUEBRA)
+// CABEÇALHO
 // ======================================================
 function desenharCabecalhoPagina(doc, dataHora) {
     const largura = doc.page.width;
     const margem = 40;
 
-    doc
-        .font('Helvetica-Bold')
+    doc.font('Helvetica-Bold')
         .fontSize(20)
         .fillColor('#0b2c66')
         .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 25, {
@@ -334,8 +332,7 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc
-        .font('Helvetica')
+    doc.font('Helvetica')
         .fontSize(10)
         .fillColor('#333')
         .text(dataHora, margem, 50, {
@@ -343,14 +340,12 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc
-        .moveTo(margem, 70)
+    doc.moveTo(margem, 70)
         .lineTo(largura - margem, 70)
         .strokeColor('#0b2c66')
         .stroke();
 
-    doc
-        .font('Helvetica-Bold')
+    doc.font('Helvetica-Bold')
         .fontSize(16)
         .fillColor('#0b2c66')
         .text('RELATÓRIO DE ESTOQUE DE BANDAS', margem, 85, {
@@ -463,11 +458,11 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPagina(doc, dataHora);
 
-        ordenados.forEach((grupo, i) => {
+        ordenados.forEach((grupo) => {
+
             garantirEspaco(doc, 80);
 
-            doc
-                .font('Helvetica-Bold')
+            doc.font('Helvetica-Bold')
                 .fontSize(13)
                 .fillColor('#0b2c66')
                 .text(`BANDA: ${grupo}`, 40);
@@ -482,21 +477,22 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // PAGINAÇÃO (CORRIGIDA - RODAPÉ)
+        // ✔️ PAGINAÇÃO FINAL CORRIGIDA (SEM DESALINHAR)
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
 
-            doc
-                .font('Helvetica')
+            const bottomY = doc.page.height - doc.page.margins.bottom + 10;
+
+            doc.font('Helvetica')
                 .fontSize(9)
                 .fillColor('#666')
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    doc.page.height - 25,
+                    bottomY,
                     {
                         width: doc.page.width - 80,
                         align: 'center'
