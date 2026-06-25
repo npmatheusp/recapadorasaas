@@ -15,6 +15,12 @@ async function carregarBandas() {
     try {
         const token = getToken();
 
+        if (!token) {
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
         const resposta = await fetch(`${API}/bandas`, {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -22,6 +28,15 @@ async function carregarBandas() {
         });
 
         const dados = await resposta.json();
+
+        if (resposta.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("perfil");
+            localStorage.removeItem("usuario");
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
 
         if (!resposta.ok) {
             console.error("ERRO API:", dados);
@@ -104,8 +119,57 @@ function filtrarBandas() {
     renderizarTabela(filtradas);
 }
 
-function gerarPdfEstoque() {
-    window.open('/api/bandas/pdf', '_blank');
+async function gerarPdfEstoque() {
+    try {
+        const token = getToken();
+
+        if (!token) {
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        const resposta = await fetch(`${API}/bandas/pdf`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (resposta.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("perfil");
+            localStorage.removeItem("usuario");
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        if (!resposta.ok) {
+            let mensagem = "Erro ao gerar PDF";
+            try {
+                const erro = await resposta.json();
+                mensagem = erro.mensagem || mensagem;
+            } catch (_) {}
+            throw new Error(mensagem);
+        }
+
+        const blob = await resposta.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "estoque-bandas.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        alert(error.message || "Erro ao gerar PDF");
+    }
 }
 
 async function salvarBanda() {
@@ -114,6 +178,12 @@ async function salvarBanda() {
 
     if (perfil !== "ADMIN") {
         alert("Sem permissão");
+        return;
+    }
+
+    if (!token) {
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "login.html";
         return;
     }
 
@@ -138,6 +208,15 @@ async function salvarBanda() {
         });
 
         const dados = await resposta.json();
+
+        if (resposta.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("perfil");
+            localStorage.removeItem("usuario");
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
 
         if (!resposta.ok) {
             alert(dados.mensagem || "Erro ao salvar banda");
@@ -167,6 +246,12 @@ async function entradaEstoque(id) {
         return;
     }
 
+    if (!token) {
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "login.html";
+        return;
+    }
+
     const quantidade = prompt("Quantidade:");
     if (!quantidade || Number(quantidade) <= 0) return;
 
@@ -186,8 +271,22 @@ async function entradaEstoque(id) {
         });
 
         const dados = await resposta.json();
-        alert(dados.mensagem || "Entrada registrada");
 
+        if (resposta.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("perfil");
+            localStorage.removeItem("usuario");
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        if (!resposta.ok) {
+            alert(dados.mensagem || "Erro ao lançar entrada de estoque");
+            return;
+        }
+
+        alert(dados.mensagem || "Entrada registrada");
         carregarBandas();
 
     } catch (error) {
@@ -205,6 +304,12 @@ async function alterarStatus(id) {
         return;
     }
 
+    if (!token) {
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "login.html";
+        return;
+    }
+
     try {
         const resposta = await fetch(`${API}/bandas/${id}/status`, {
             method: "PATCH",
@@ -214,8 +319,22 @@ async function alterarStatus(id) {
         });
 
         const dados = await resposta.json();
-        alert(dados.mensagem || "Status alterado com sucesso");
 
+        if (resposta.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("perfil");
+            localStorage.removeItem("usuario");
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        if (!resposta.ok) {
+            alert(dados.mensagem || "Erro ao alterar status");
+            return;
+        }
+
+        alert(dados.mensagem || "Status alterado com sucesso");
         carregarBandas();
 
     } catch (error) {
@@ -227,6 +346,12 @@ async function alterarStatus(id) {
 document.addEventListener("DOMContentLoaded", () => {
     const perfil = getPerfil();
 
+    if (!perfil) {
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "login.html";
+        return;
+    }
+
     if (perfil !== "ADMIN") {
         const form = document.getElementById("formCadastroBandas");
         if (form) form.style.display = "none";
@@ -234,4 +359,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
     carregarBandas();
 });
-
