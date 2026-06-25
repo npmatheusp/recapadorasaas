@@ -307,54 +307,11 @@ function formatarDataHoraBR() {
 }
 
 function extrairGrupoBanda(codigo = '') {
-    // Ex.: "HDC1 225L" => "HDC1"
-    // Ex.: "BDR2 260M" => "BDR2"
     const texto = String(codigo).trim();
     if (!texto) return 'SEM GRUPO';
 
     const partes = texto.split(/\s+/);
     return partes[0] || 'SEM GRUPO';
-}
-
-function extrairLargura(codigo = '', descricao = '') {
-    // tenta achar número de largura em código/descrição
-    // ex.: "HDC1 225L" => 225
-    const texto = `${codigo} ${descricao}`.trim();
-    const match = texto.match(/\b(\d{3})\b/);
-    return match ? Number(match[1]) : '';
-}
-
-function agruparBandasPorDesenho(bandas) {
-    const grupos = {};
-
-    for (const banda of bandas) {
-        const grupo = extrairGrupoBanda(banda.codigo);
-
-        if (!grupos[grupo]) {
-            grupos[grupo] = [];
-        }
-
-        grupos[grupo].push({
-            ...banda,
-            largura: extrairLargura(banda.codigo, banda.descricao)
-        });
-    }
-
-    // ordenar itens dentro do grupo por largura / código
-    Object.keys(grupos).forEach(grupo => {
-        grupos[grupo].sort((a, b) => {
-            const larguraA = Number(a.largura) || 0;
-            const larguraB = Number(b.largura) || 0;
-
-            if (larguraA !== larguraB) {
-                return larguraA - larguraB;
-            }
-
-            return String(a.codigo).localeCompare(String(b.codigo), 'pt-BR');
-        });
-    });
-
-    return grupos;
 }
 
 function garantirEspaco(doc, alturaNecessaria = 80) {
@@ -364,67 +321,53 @@ function garantirEspaco(doc, alturaNecessaria = 80) {
     }
 }
 
+// ======================================================
+// CABEÇALHO (AJUSTADO)
+// ======================================================
 function desenharCabecalhoPagina(doc, dataHora) {
     const larguraPagina = doc.page.width;
     const margem = 40;
 
-    // topo
     doc
         .font('Helvetica-Bold')
-        .fontSize(24)
+        .fontSize(22)
         .fillColor('#0b2c66')
-        .text('DoVale', margem, 20, { continued: true });
-
-    doc
-        .font('Helvetica')
-        .fontSize(11)
-        .fillColor('#333333')
-        .text(' Prudente Pneus e Recapagens Ltda', 120, 28);
+        .text('Do Vale Prudente Pneus e Recapagens Ltda', margem, 25, {
+            width: larguraPagina - margem * 2,
+            align: 'center'
+        });
 
     doc
         .font('Helvetica')
         .fontSize(10)
         .fillColor('#333333')
-        .text(dataHora, larguraPagina - 180, 24, {
-            width: 140,
-            align: 'right'
+        .text(dataHora, margem, 50, {
+            width: larguraPagina - margem * 2,
+            align: 'center'
         });
 
     doc
-        .moveTo(margem, 55)
-        .lineTo(larguraPagina - margem, 55)
-        .lineWidth(1.5)
+        .moveTo(margem, 70)
+        .lineTo(larguraPagina - margem, 70)
         .strokeColor('#0b2c66')
+        .lineWidth(1.2)
         .stroke();
 
-    // título
     doc
         .font('Helvetica-Bold')
-        .fontSize(20)
+        .fontSize(18)
         .fillColor('#0b2c66')
-        .text('RELATÓRIO DE ESTOQUE DE BANDAS', 40, 75, {
+        .text('RELATÓRIO DE ESTOQUE DE BANDAS', margem, 85, {
+            width: larguraPagina - margem * 2,
             align: 'center'
         });
 
-    doc
-        .font('Helvetica')
-        .fontSize(11)
-        .fillColor('#333333')
-        .text('Estoque atual de bandas por desenho/medida', 40, 102, {
-            align: 'center'
-        });
-
-    doc
-        .font('Helvetica')
-        .fontSize(11)
-        .fillColor('#333333')
-        .text(`Gerado em: ${dataHora}`, 40, 120, {
-            align: 'center'
-        });
-
-    doc.y = 155;
+    doc.y = 120;
 }
 
+// ======================================================
+// TÍTULO GRUPO
+// ======================================================
 function desenharTituloGrupo(doc, titulo) {
     garantirEspaco(doc, 50);
 
@@ -432,9 +375,7 @@ function desenharTituloGrupo(doc, titulo) {
     const largura = doc.page.width - 80;
     const y = doc.y;
 
-    doc
-        .roundedRect(x, y, largura, 28, 4)
-        .fill('#0b2c66');
+    doc.roundedRect(x, y, largura, 28, 4).fill('#0b2c66');
 
     doc
         .fillColor('#ffffff')
@@ -448,6 +389,9 @@ function desenharTituloGrupo(doc, titulo) {
     doc.y = y + 36;
 }
 
+// ======================================================
+// TABELA (SEM LARGURA)
+// ======================================================
 function desenharCabecalhoTabela(doc) {
     garantirEspaco(doc, 40);
 
@@ -456,15 +400,11 @@ function desenharCabecalhoTabela(doc) {
     const largura = doc.page.width - 80;
     const altura = 26;
 
-    // colunas
-    const colCodigo = 180;
-    const colLargura = 110;
-    const colEstoque = 110;
-    const colAtivo = largura - colCodigo - colLargura - colEstoque;
+    const colCodigo = 260;
+    const colEstoque = 120;
+    const colAtivo = largura - colCodigo - colEstoque;
 
-    doc
-        .rect(x, y, largura, altura)
-        .fill('#dfe8f3');
+    doc.rect(x, y, largura, altura).fill('#dfe8f3');
 
     doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(10);
 
@@ -472,17 +412,12 @@ function desenharCabecalhoTabela(doc) {
         width: colCodigo - 10
     });
 
-    doc.text('Largura (mm)', x + colCodigo + 8, y + 8, {
-        width: colLargura - 10,
-        align: 'center'
-    });
-
-    doc.text('Estoque Total', x + colCodigo + colLargura + 8, y + 8, {
+    doc.text('Estoque Total', x + colCodigo + 8, y + 8, {
         width: colEstoque - 10,
         align: 'center'
     });
 
-    doc.text('Ativo', x + colCodigo + colLargura + colEstoque + 8, y + 8, {
+    doc.text('Ativo', x + colCodigo + colEstoque + 8, y + 8, {
         width: colAtivo - 10,
         align: 'center'
     });
@@ -490,6 +425,9 @@ function desenharCabecalhoTabela(doc) {
     doc.y = y + altura;
 }
 
+// ======================================================
+// LINHA TABELA (SEM LARGURA)
+// ======================================================
 function desenharLinhaTabela(doc, item, zebra = false) {
     garantirEspaco(doc, 28);
 
@@ -498,26 +436,20 @@ function desenharLinhaTabela(doc, item, zebra = false) {
     const largura = doc.page.width - 80;
     const altura = 28;
 
-    const colCodigo = 180;
-    const colLargura = 110;
-    const colEstoque = 110;
-    const colAtivo = largura - colCodigo - colLargura - colEstoque;
+    const colCodigo = 260;
+    const colEstoque = 120;
+    const colAtivo = largura - colCodigo - colEstoque;
 
     if (zebra) {
-        doc
-            .rect(x, y, largura, altura)
-            .fill('#f7f9fc');
+        doc.rect(x, y, largura, altura).fill('#f7f9fc');
     }
 
-    // linha divisória
-    doc
-        .moveTo(x, y + altura)
+    doc.moveTo(x, y + altura)
         .lineTo(x + largura, y + altura)
-        .lineWidth(0.5)
         .strokeColor('#d9d9d9')
         .stroke();
 
-    doc.fillColor('#222222').font('Helvetica').fontSize(10);
+    doc.fillColor('#222').font('Helvetica').fontSize(10);
 
     const descricaoLinha = item.descricao
         ? `${item.codigo} - ${item.descricao}`
@@ -527,17 +459,12 @@ function desenharLinhaTabela(doc, item, zebra = false) {
         width: colCodigo - 12
     });
 
-    doc.text(String(item.largura || ''), x + colCodigo + 8, y + 8, {
-        width: colLargura - 10,
-        align: 'center'
-    });
-
-    doc.text(String(item.estoque_total || 0), x + colCodigo + colLargura + 8, y + 8, {
+    doc.text(String(item.estoque_total || 0), x + colCodigo + 8, y + 8, {
         width: colEstoque - 10,
         align: 'center'
     });
 
-    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colLargura + colEstoque + 8, y + 8, {
+    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 8, y + 8, {
         width: colAtivo - 10,
         align: 'center'
     });
@@ -545,109 +472,80 @@ function desenharLinhaTabela(doc, item, zebra = false) {
     doc.y = y + altura;
 }
 
+// ======================================================
+// RESUMO GRUPO (CORRIGIDO)
+// ======================================================
 function desenharResumoGrupo(doc, itens) {
-    garantirEspaco(doc, 30);
+    garantirEspaco(doc, 50);
 
     const totalItens = itens.length;
-    const totalEstoque = itens.reduce((acc, item) => acc + Number(item.estoque_total || 0), 0);
+    const totalEstoque = itens.reduce(
+        (acc, item) => acc + Number(item.estoque_total || 0),
+        0
+    );
 
-    doc.moveDown(0.4);
-
-    doc
-        .font('Helvetica-Bold')
-        .fontSize(11)
-        .fillColor('#222222')
-        .text(`TOTAL DE ITENS: ${totalItens}`, 40, doc.y, {
-            align: 'center'
-        });
+    const y = doc.y;
 
     doc
         .font('Helvetica-Bold')
         .fontSize(11)
-        .fillColor('#222222')
-        .text(`TOTAL EM ESTOQUE: ${totalEstoque}`, 0, doc.y - 13, {
-            align: 'center'
-        });
-
-    doc.moveDown(1.2);
-}
-
-function desenharResumoFinal(doc, resumo) {
-    garantirEspaco(doc, 120);
-
-    const x = 40;
-    const y = doc.y + 5;
-    const largura = doc.page.width - 80;
-    const altura = 95;
-
-    doc
-        .roundedRect(x, y, largura, altura, 8)
-        .lineWidth(1)
-        .strokeColor('#0b2c66')
-        .stroke();
-
-    doc
-        .moveTo(x + largura / 2, y + 12)
-        .lineTo(x + largura / 2, y + altura - 12)
-        .lineWidth(1)
-        .strokeColor('#0b2c66')
-        .stroke();
-
-    // lado esquerdo
-    doc
-        .font('Helvetica-Bold')
-        .fontSize(16)
-        .fillColor('#111111')
-        .text('RESUMO GERAL', x + 20, y + 15);
-
-    doc
-        .font('Helvetica')
-        .fontSize(12)
-        .fillColor('#222222')
-        .text(`Total de bandas ativas: ${resumo.totalBandasAtivas}`, x + 20, y + 42)
-        .text(`Total de itens (medidas): ${resumo.totalItens}`, x + 20, y + 60)
-        .text(`Total de grupos (desenhos): ${resumo.totalGrupos}`, x + 20, y + 78);
-
-    // lado direito
-    doc
-        .font('Helvetica')
-        .fontSize(14)
-        .fillColor('#222222')
-        .text('Total geral em estoque:', x + largura / 2 + 20, y + 30);
+        .fillColor('#222')
+        .text(`TOTAL DE ITENS: ${totalItens}`, 40, y);
 
     doc
         .font('Helvetica-Bold')
-        .fontSize(28)
-        .fillColor('#0b2c66')
-        .text(String(resumo.totalEstoqueGeral), x + largura / 2 + 20, y + 52, {
-            width: largura / 2 - 40,
-            align: 'center'
-        });
+        .fontSize(11)
+        .fillColor('#222')
+        .text(`TOTAL EM ESTOQUE: ${totalEstoque}`, 40, y + 14);
 
-    doc.y = y + altura + 20;
-
-    doc
-        .font('Helvetica-Oblique')
-        .fontSize(10)
-        .fillColor('#555555')
-        .text('Este relatório é apenas para fins informativos.', 40, doc.y, {
-            align: 'center'
-        });
+    doc.y = y + 35;
 }
 
 // ======================================================
-// GERAR PDF DE ESTOQUE
+// RESUMO FINAL (CORRIGIDO)
+// ======================================================
+function desenharResumoFinal(doc, resumo) {
+    garantirEspaco(doc, 140);
+
+    const x = 40;
+    const y = doc.y;
+    const largura = doc.page.width - 80;
+    const altura = 100;
+
+    doc.roundedRect(x, y, largura, altura, 8)
+        .strokeColor('#0b2c66')
+        .stroke();
+
+    doc.font('Helvetica-Bold')
+        .fontSize(16)
+        .fillColor('#111')
+        .text('RESUMO GERAL', x + 20, y + 15);
+
+    doc.font('Helvetica')
+        .fontSize(12)
+        .text(`Total de bandas ativas: ${resumo.totalBandasAtivas}`, x + 20, y + 40)
+        .text(`Total de itens: ${resumo.totalItens}`, x + 20, y + 58)
+        .text(`Total de grupos: ${resumo.totalGrupos}`, x + 20, y + 76);
+
+    doc.font('Helvetica-Bold')
+        .fontSize(14)
+        .text('Total geral em estoque:', x + 280, y + 40);
+
+    doc.font('Helvetica-Bold')
+        .fontSize(26)
+        .fillColor('#0b2c66')
+        .text(String(resumo.totalEstoqueGeral), x + 280, y + 62);
+
+    doc.y = y + altura + 20;
+}
+
+// ======================================================
+// GERAR PDF
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
         const [bandas] = await pool.execute(`
-            SELECT
-                id,
-                codigo,
-                descricao,
-                estoque_total,
-                estoque_minimo,
-                ativo
+            SELECT id, codigo, descricao, estoque_total, estoque_minimo, ativo
             FROM bandas
             WHERE ativo = TRUE
             ORDER BY codigo
@@ -655,62 +553,50 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         if (!bandas.length) {
             return res.status(404).json({
-                mensagem: 'Nenhuma banda ativa encontrada para gerar o relatório'
+                mensagem: 'Nenhuma banda ativa encontrada'
             });
         }
 
-        const grupos = agruparBandasPorDesenho(bandas);
-        const gruposOrdenados = Object.keys(grupos).sort((a, b) =>
-            a.localeCompare(b, 'pt-BR', { numeric: true })
-        );
+        const grupos = {};
+        for (const b of bandas) {
+            const grupo = extrairGrupoBanda(b.codigo);
+            if (!grupos[grupo]) grupos[grupo] = [];
+            grupos[grupo].push(b);
+        }
+
+        const gruposOrdenados = Object.keys(grupos).sort();
 
         const dataHora = formatarDataHoraBR();
 
-        // response PDF
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader(
-            'Content-Disposition',
-            'inline; filename=relatorio-estoque-bandas.pdf'
-        );
+        res.setHeader('Content-Disposition', 'inline; filename=relatorio.pdf');
 
-        const doc = new PDFDocument({
-            size: 'A4',
-            margin: 40,
-            bufferPages: true
-        });
-
+        const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
         doc.pipe(res);
 
-        // Cabeçalho da primeira página
         desenharCabecalhoPagina(doc, dataHora);
 
         let totalEstoqueGeral = 0;
         let totalItens = 0;
 
-        gruposOrdenados.forEach((nomeGrupo, indiceGrupo) => {
-            const itens = grupos[nomeGrupo];
+        gruposOrdenados.forEach((grupo, i) => {
+            const itens = grupos[grupo];
 
-            const alturaEstimadaGrupo = 70 + (itens.length * 28) + 45;
-            garantirEspaco(doc, alturaEstimadaGrupo);
+            garantirEspaco(doc, 100);
 
-            desenharTituloGrupo(doc, nomeGrupo);
+            desenharTituloGrupo(doc, grupo);
             desenharCabecalhoTabela(doc);
 
-            itens.forEach((item, index) => {
-                desenharLinhaTabela(doc, item, index % 2 !== 0);
+            itens.forEach((item, idx) => {
+                desenharLinhaTabela(doc, item, idx % 2 !== 0);
             });
 
             desenharResumoGrupo(doc, itens);
 
+            totalEstoqueGeral += itens.reduce((a, b) => a + Number(b.estoque_total || 0), 0);
             totalItens += itens.length;
-            totalEstoqueGeral += itens.reduce(
-                (acc, item) => acc + Number(item.estoque_total || 0),
-                0
-            );
 
-            if (indiceGrupo < gruposOrdenados.length - 1) {
-                doc.moveDown(0.6);
-            }
+            if (i < gruposOrdenados.length - 1) doc.moveDown(1);
         });
 
         desenharResumoFinal(doc, {
@@ -720,32 +606,16 @@ exports.gerarPdfEstoque = async (req, res) => {
             totalEstoqueGeral
         });
 
-        // numeração de páginas
-        const pageRange = doc.bufferedPageRange();
-        for (let i = 0; i < pageRange.count; i++) {
+        const range = doc.bufferedPageRange();
+        for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
-
-            doc
-                .font('Helvetica')
-                .fontSize(10)
-                .fillColor('#333333')
-                .text(
-                    `Página ${i + 1} de ${pageRange.count}`,
-                    doc.page.width - 140,
-                    40,
-                    {
-                        width: 100,
-                        align: 'right'
-                    }
-                );
+            doc.text(`Página ${i + 1} de ${range.count}`, 480, 20);
         }
 
         doc.end();
 
     } catch (error) {
-        console.error('Erro ao gerar PDF:', error);
-        return res.status(500).json({
-            mensagem: 'Erro ao gerar PDF de estoque'
-        });
+        console.error(error);
+        return res.status(500).json({ mensagem: 'Erro ao gerar PDF' });
     }
 };
