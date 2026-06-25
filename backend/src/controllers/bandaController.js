@@ -16,7 +16,62 @@ exports.listar = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ mensagem: 'Erro ao listar bandas' });
+        return res.status(500).json({
+            mensagem: 'Erro ao listar bandas'
+        });
+    }
+};
+
+// ======================================================
+// CADASTRAR
+// ======================================================
+exports.cadastrar = async (req, res) => {
+    try {
+        const {
+            codigo,
+            descricao,
+            estoque_total,
+            estoque_minimo
+        } = req.body;
+
+        if (!codigo || !codigo.trim()) {
+            return res.status(400).json({
+                mensagem: 'Código é obrigatório'
+            });
+        }
+
+        const [existe] = await pool.execute(`
+            SELECT id
+            FROM bandas
+            WHERE codigo = ?
+        `, [codigo.trim()]);
+
+        if (existe.length > 0) {
+            return res.status(400).json({
+                mensagem: 'Já existe uma banda com este código'
+            });
+        }
+
+        await pool.execute(`
+            INSERT INTO bandas
+            (codigo, descricao, estoque_total, estoque_minimo)
+            VALUES (?, ?, ?, ?)
+        `, [
+            codigo.trim(),
+            descricao || null,
+            Number(estoque_total) || 0,
+            Number(estoque_minimo) || 0
+        ]);
+
+        return res.status(201).json({
+            mensagem: 'Banda cadastrada com sucesso'
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            mensagem: 'Erro ao cadastrar banda'
+        });
     }
 };
 
@@ -32,25 +87,28 @@ function formatarDataHoraBR() {
 }
 
 function extrairGrupoBanda(codigo = '') {
-    const partes = String(codigo).trim().split(/\s+/);
+    const texto = String(codigo).trim();
+    const partes = texto.split(/\s+/);
     return partes[0] || 'SEM GRUPO';
 }
 
-function garantirEspaco(doc, altura = 80) {
-    const limite = doc.page.height - doc.page.margins.bottom - 40;
+// 🔥 AJUSTE IMPORTANTE AQUI
+function garantirEspaco(doc, altura = 120) {
+    const limite = doc.page.height - doc.page.margins.bottom;
     if (doc.y + altura > limite) {
         doc.addPage();
     }
 }
 
 // ======================================================
-// CABEÇALHO (SEM ALTERAR SUA IDEIA)
+// CABEÇALHO
 // ======================================================
 function desenharCabecalhoPagina(doc, dataHora) {
     const largura = doc.page.width;
     const margem = 40;
 
-    doc.font('Helvetica-Bold')
+    doc
+        .font('Helvetica-Bold')
         .fontSize(20)
         .fillColor('#0b2c66')
         .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 25, {
@@ -58,7 +116,8 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc.font('Helvetica')
+    doc
+        .font('Helvetica')
         .fontSize(10)
         .fillColor('#333')
         .text(dataHora, margem, 50, {
@@ -66,12 +125,14 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc.moveTo(margem, 70)
+    doc
+        .moveTo(margem, 70)
         .lineTo(largura - margem, 70)
         .strokeColor('#0b2c66')
         .stroke();
 
-    doc.font('Helvetica-Bold')
+    doc
+        .font('Helvetica-Bold')
         .fontSize(16)
         .fillColor('#0b2c66')
         .text('RELATÓRIO DE ESTOQUE DE BANDAS', margem, 85, {
@@ -102,19 +163,9 @@ function desenharCabecalhoTabela(doc) {
         .font('Helvetica-Bold')
         .fontSize(10);
 
-    doc.text('Código / Descrição', x + 8, y + 7, {
-        width: colCodigo - 10
-    });
-
-    doc.text('Estoque Total', x + colCodigo + 8, y + 7, {
-        width: colEstoque - 10,
-        align: 'center'
-    });
-
-    doc.text('Ativo', x + colCodigo + colEstoque + 8, y + 7, {
-        width: colAtivo - 10,
-        align: 'center'
-    });
+    doc.text('Código / Descrição', x + 8, y + 7, { width: colCodigo - 10 });
+    doc.text('Estoque Total', x + colCodigo + 8, y + 7, { width: colEstoque - 10, align: 'center' });
+    doc.text('Ativo', x + colCodigo + colEstoque + 8, y + 7, { width: colAtivo - 10, align: 'center' });
 
     doc.y = y + 25;
 }
@@ -139,29 +190,23 @@ function desenharLinhaTabela(doc, item, zebra = false) {
         .strokeColor('#ddd')
         .stroke();
 
-    doc.fillColor('#222')
-        .font('Helvetica')
-        .fontSize(10);
+    doc.fillColor('#222').font('Helvetica').fontSize(10);
 
     const texto = item.descricao
         ? `${item.codigo} - ${item.descricao}`
         : item.codigo;
 
-    doc.text(texto, x + 8, y + 8, {
-        width: colCodigo - 10
+    doc.text(texto, x + 8, y + 8, { width: colCodigo - 10 });
+
+    doc.text(String(item.estoque_total || 0), x + colCodigo + 8, y + 8, {
+        width: colEstoque - 10,
+        align: 'center'
     });
 
-    doc.text(String(item.estoque_total || 0),
-        x + colCodigo + 8,
-        y + 8,
-        { width: colEstoque - 10, align: 'center' }
-    );
-
-    doc.text(item.ativo ? 'Sim' : 'Não',
-        x + colCodigo + colEstoque + 8,
-        y + 8,
-        { width: colAtivo - 10, align: 'center' }
-    );
+    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 8, y + 8, {
+        width: colAtivo - 10,
+        align: 'center'
+    });
 
     doc.y = y + 28;
 }
@@ -204,7 +249,7 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
 
-            garantirEspaco(doc, 100);
+            garantirEspaco(doc, 120); // 🔥 AJUSTE IMPORTANTE
 
             doc.font('Helvetica-Bold')
                 .fontSize(13)
@@ -221,20 +266,21 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // PAGINAÇÃO CORRIGIDA (SEM SOBREPOSIÇÃO)
+        // PAGINAÇÃO CORRIGIDA
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
 
-            doc.font('Helvetica')
+            doc
+                .font('Helvetica')
                 .fontSize(9)
                 .fillColor('#666')
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    doc.page.height - 35,
+                    doc.page.height - 20, // 🔥 CORREÇÃO FINAL
                     {
                         width: doc.page.width - 80,
                         align: 'center'
