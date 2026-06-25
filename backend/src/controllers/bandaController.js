@@ -354,7 +354,7 @@ function desenharCabecalhoPagina(doc, dataHora) {
         });
 
     doc.y = 120;
-};
+}
 
 // ======================================================
 // TABELA
@@ -477,14 +477,12 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // ✔️ PAGINAÇÃO CORRIGIDA (FIXA NO RODAPÉ REAL)
+        // ✔️ CORREÇÃO DEFINITIVA DA PAGINAÇÃO
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
-
-            const bottomY = doc.page.height - 25; // FIXO (não depende de margem)
 
             doc.font('Helvetica')
                 .fontSize(9)
@@ -492,7 +490,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    bottomY,
+                    doc.page.height - 20, // 👈 FIXO DENTRO DA PÁGINA
                     {
                         width: doc.page.width - 80,
                         align: 'center'
