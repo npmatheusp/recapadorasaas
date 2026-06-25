@@ -23,59 +23,6 @@ exports.listar = async (req, res) => {
 };
 
 // ======================================================
-// CADASTRAR
-// ======================================================
-exports.cadastrar = async (req, res) => {
-    try {
-        const {
-            codigo,
-            descricao,
-            estoque_total,
-            estoque_minimo
-        } = req.body;
-
-        if (!codigo || !codigo.trim()) {
-            return res.status(400).json({
-                mensagem: 'Código é obrigatório'
-            });
-        }
-
-        const [existe] = await pool.execute(`
-            SELECT id
-            FROM bandas
-            WHERE codigo = ?
-        `, [codigo.trim()]);
-
-        if (existe.length > 0) {
-            return res.status(400).json({
-                mensagem: 'Já existe uma banda com este código'
-            });
-        }
-
-        await pool.execute(`
-            INSERT INTO bandas
-            (codigo, descricao, estoque_total, estoque_minimo)
-            VALUES (?, ?, ?, ?)
-        `, [
-            codigo.trim(),
-            descricao || null,
-            Number(estoque_total) || 0,
-            Number(estoque_minimo) || 0
-        ]);
-
-        return res.status(201).json({
-            mensagem: 'Banda cadastrada com sucesso'
-        });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            mensagem: 'Erro ao cadastrar banda'
-        });
-    }
-};
-
-// ======================================================
 // HELPERS
 // ======================================================
 function formatarDataHoraBR() {
@@ -87,13 +34,12 @@ function formatarDataHoraBR() {
 }
 
 function extrairGrupoBanda(codigo = '') {
-    const texto = String(codigo).trim();
+    const texto = String(codigo || '').trim();
     const partes = texto.split(/\s+/);
     return partes[0] || 'SEM GRUPO';
 }
 
-// 🔥 AJUSTE IMPORTANTE AQUI
-function garantirEspaco(doc, altura = 120) {
+function garantirEspaco(doc, altura = 80) {
     const limite = doc.page.height - doc.page.margins.bottom;
     if (doc.y + altura > limite) {
         doc.addPage();
@@ -107,8 +53,7 @@ function desenharCabecalhoPagina(doc, dataHora) {
     const largura = doc.page.width;
     const margem = 40;
 
-    doc
-        .font('Helvetica-Bold')
+    doc.font('Helvetica-Bold')
         .fontSize(20)
         .fillColor('#0b2c66')
         .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 25, {
@@ -116,8 +61,7 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc
-        .font('Helvetica')
+    doc.font('Helvetica')
         .fontSize(10)
         .fillColor('#333')
         .text(dataHora, margem, 50, {
@@ -125,14 +69,12 @@ function desenharCabecalhoPagina(doc, dataHora) {
             align: 'center'
         });
 
-    doc
-        .moveTo(margem, 70)
+    doc.moveTo(margem, 70)
         .lineTo(largura - margem, 70)
         .strokeColor('#0b2c66')
         .stroke();
 
-    doc
-        .font('Helvetica-Bold')
+    doc.font('Helvetica-Bold')
         .fontSize(16)
         .fillColor('#0b2c66')
         .text('RELATÓRIO DE ESTOQUE DE BANDAS', margem, 85, {
@@ -190,7 +132,9 @@ function desenharLinhaTabela(doc, item, zebra = false) {
         .strokeColor('#ddd')
         .stroke();
 
-    doc.fillColor('#222').font('Helvetica').fontSize(10);
+    doc.fillColor('#222')
+        .font('Helvetica')
+        .fontSize(10);
 
     const texto = item.descricao
         ? `${item.codigo} - ${item.descricao}`
@@ -198,21 +142,23 @@ function desenharLinhaTabela(doc, item, zebra = false) {
 
     doc.text(texto, x + 8, y + 8, { width: colCodigo - 10 });
 
-    doc.text(String(item.estoque_total || 0), x + colCodigo + 8, y + 8, {
-        width: colEstoque - 10,
-        align: 'center'
-    });
+    doc.text(String(item.estoque_total || 0),
+        x + colCodigo + 8,
+        y + 8,
+        { width: colEstoque - 10, align: 'center' }
+    );
 
-    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 8, y + 8, {
-        width: colAtivo - 10,
-        align: 'center'
-    });
+    doc.text(item.ativo ? 'Sim' : 'Não',
+        x + colCodigo + colEstoque + 8,
+        y + 8,
+        { width: colAtivo - 10, align: 'center' }
+    );
 
     doc.y = y + 28;
 }
 
 // ======================================================
-// PDF PRINCIPAL
+// PDF PRINCIPAL (DEPLOY SAFE)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -226,7 +172,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         const grupos = {};
 
         for (const b of bandas) {
-            const g = extrairGrupoBanda(b.codigo);
+            const g = extrairGrupoBanda(b.codigo || '');
             if (!grupos[g]) grupos[g] = [];
             grupos[g].push(b);
         }
@@ -238,8 +184,7 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         const doc = new PDFDocument({
             size: 'A4',
-            margin: 40,
-            bufferPages: true
+            margin: 40
         });
 
         doc.pipe(res);
@@ -249,7 +194,7 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
 
-            garantirEspaco(doc, 120); // 🔥 AJUSTE IMPORTANTE
+            garantirEspaco(doc, 100);
 
             doc.font('Helvetica-Bold')
                 .fontSize(13)
@@ -266,21 +211,20 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // PAGINAÇÃO CORRIGIDA
+        // PAGINAÇÃO SEGURA (SEM bufferPages)
         // ==================================================
-        const range = doc.bufferedPageRange();
+        let pages = doc.bufferedPageRange ? doc.bufferedPageRange() : { count: 1 };
 
-        for (let i = 0; i < range.count; i++) {
+        for (let i = 0; i < pages.count; i++) {
             doc.switchToPage(i);
 
-            doc
-                .font('Helvetica')
+            doc.font('Helvetica')
                 .fontSize(9)
                 .fillColor('#666')
                 .text(
-                    `Página ${i + 1} de ${range.count}`,
+                    `Página ${i + 1} de ${pages.count}`,
                     40,
-                    doc.page.height - 20, // 🔥 CORREÇÃO FINAL
+                    doc.page.height - 30,
                     {
                         width: doc.page.width - 80,
                         align: 'center'
@@ -291,7 +235,9 @@ exports.gerarPdfEstoque = async (req, res) => {
         doc.end();
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ mensagem: 'Erro ao gerar PDF' });
+        console.error('ERRO PDF:', error);
+        return res.status(500).json({
+            mensagem: 'Erro ao gerar PDF'
+        });
     }
 };
