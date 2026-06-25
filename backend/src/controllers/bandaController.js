@@ -200,7 +200,7 @@ exports.alterarStatus = async (req, res) => {
 exports.entradaEstoque = async (req, res) => {
     try {
         const { id } = req.params;
-        const { quantidade, observacao } = req.body;
+        const { quantidade } = req.body;
 
         const qtd = Number(quantidade);
 
@@ -294,96 +294,129 @@ exports.gerarPdfEstoque = async (req, res) => {
         doc.pipe(res);
 
         // =========================
-        // CABEÇALHO
+        // DATA / HORA CORRETA
         // =========================
-        doc
-            .fontSize(18)
-            .text('Relatório de Estoque de Bandas', {
-                align: 'center'
-            });
-
-        doc.moveDown(0.5);
-
-        doc
-            .fontSize(10)
-            .text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, {
-                align: 'center'
-            });
-
-        doc.moveDown(1.5);
+        const dataGeracao = new Date().toLocaleString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
 
         // =========================
-        // RESUMO
+        // RESUMOS
         // =========================
         const totalItens = bandas.reduce(
             (acc, item) => acc + Number(item.estoque_total || 0),
             0
         );
 
+        const abaixoMinimo = bandas.filter(item =>
+            Number(item.estoque_total || 0) < Number(item.estoque_minimo || 0)
+        );
+
+        // =========================
+        // CABEÇALHO
+        // =========================
         doc
-            .fontSize(12)
-            .text(`Total de bandas cadastradas ativas: ${bandas.length}`);
+            .font('Helvetica-Bold')
+            .fontSize(18)
+            .text('RELATÓRIO DE ESTOQUE DE BANDAS', {
+                align: 'center'
+            });
+
+        doc.moveDown(0.4);
 
         doc
-            .fontSize(12)
-            .text(`Total geral em estoque: ${totalItens}`);
+            .font('Helvetica')
+            .fontSize(10)
+            .text(`Gerado em: ${dataGeracao}`, {
+                align: 'center'
+            });
+
+        doc.moveDown(1.2);
+
+        // =========================
+        // BLOCO RESUMO
+        // =========================
+        doc.font('Helvetica-Bold').fontSize(12).text('Resumo do Estoque');
+        doc.moveDown(0.4);
+
+        doc.font('Helvetica').fontSize(11);
+        doc.text(`• Total de bandas ativas: ${bandas.length}`);
+        doc.text(`• Total geral em estoque: ${totalItens}`);
+        doc.text(`• Bandas abaixo do estoque mínimo: ${abaixoMinimo.length}`);
 
         doc.moveDown(1);
+
+        if (abaixoMinimo.length > 0) {
+            doc
+                .font('Helvetica-Bold')
+                .fontSize(11)
+                .text('ATENÇÃO: Existem bandas abaixo do estoque mínimo.', {
+                    underline: false
+                });
+
+            doc.moveDown(0.8);
+        }
 
         // =========================
         // TABELA
         // =========================
         const startX = 40;
-        let y = doc.y + 10;
+        let y = doc.y;
 
         const colCodigo = startX;
         const colDescricao = 120;
-        const colEstoque = 350;
-        const colMinimo = 430;
-        const colStatus = 500;
+        const colEstoque = 345;
+        const colMinimo = 410;
+        const colSituacao = 475;
 
-        // Cabeçalho da tabela
-        doc.fontSize(10).font('Helvetica-Bold');
-        doc.text('Código', colCodigo, y);
-        doc.text('Descrição', colDescricao, y);
-        doc.text('Estoque', colEstoque, y);
-        doc.text('Mínimo', colMinimo, y);
-        doc.text('Status', colStatus, y);
+        function desenharCabecalhoTabela() {
+            doc.font('Helvetica-Bold').fontSize(10);
+            doc.text('Código', colCodigo, y);
+            doc.text('Descrição', colDescricao, y, { width: 210 });
+            doc.text('Estoque', colEstoque, y, { width: 50 });
+            doc.text('Mínimo', colMinimo, y, { width: 50 });
+            doc.text('Situação', colSituacao, y, { width: 80 });
 
-        y += 20;
+            y += 18;
+            doc.moveTo(startX, y).lineTo(555, y).stroke();
+            y += 8;
+        }
 
-        doc.moveTo(startX, y - 5).lineTo(560, y - 5).stroke();
-
-        doc.font('Helvetica');
+        desenharCabecalhoTabela();
 
         if (bandas.length === 0) {
-            doc.text('Nenhuma banda cadastrada.', startX, y + 10);
+            doc.font('Helvetica').fontSize(10).text('Nenhuma banda ativa cadastrada.', startX, y);
         } else {
             for (const banda of bandas) {
-                // quebra de página
-                if (y > 750) {
-                    doc.addPage();
-                    y = 50;
-
-                    doc.fontSize(10).font('Helvetica-Bold');
-                    doc.text('Código', colCodigo, y);
-                    doc.text('Descrição', colDescricao, y);
-                    doc.text('Estoque', colEstoque, y);
-                    doc.text('Mínimo', colMinimo, y);
-                    doc.text('Status', colStatus, y);
-
-                    y += 20;
-                    doc.moveTo(startX, y - 5).lineTo(560, y - 5).stroke();
-                    doc.font('Helvetica');
-                }
-
+                const codigo = String(banda.codigo || '');
                 const descricao = banda.descricao || '-';
                 const estoque = Number(banda.estoque_total || 0);
                 const minimo = Number(banda.estoque_minimo || 0);
-                const status = banda.ativo ? 'Ativo' : 'Inativo';
+                const critica = estoque < minimo;
 
-                doc.fontSize(10);
-                doc.text(String(banda.codigo || ''), colCodigo, y, {
+                // altura estimada da linha
+                const alturaDescricao = doc.heightOfString(descricao, {
+                    width: 210
+                });
+
+                const alturaLinha = Math.max(18, alturaDescricao + 4);
+
+                // quebra de página
+                if (y + alturaLinha > 770) {
+                    doc.addPage();
+                    y = 40;
+                    desenharCabecalhoTabela();
+                }
+
+                doc.font('Helvetica').fontSize(10);
+
+                doc.text(codigo, colCodigo, y, {
                     width: 70
                 });
 
@@ -399,29 +432,54 @@ exports.gerarPdfEstoque = async (req, res) => {
                     width: 50
                 });
 
-                doc.text(status, colStatus, y, {
-                    width: 50
-                });
+                doc.text(
+                    critica ? 'ABAIXO DO MÍNIMO' : 'OK',
+                    colSituacao,
+                    y,
+                    { width: 80 }
+                );
 
-                y += 22;
+                y += alturaLinha + 6;
+
+                // linha separadora
+                doc.moveTo(startX, y - 3).lineTo(555, y - 3).strokeColor('#dddddd').stroke();
+                doc.strokeColor('#000000');
             }
         }
 
+        // =========================
+        // RODAPÉ FINAL
+        // =========================
         doc.moveDown(2);
 
-        // =========================
-        // RODAPÉ
-        // =========================
-        doc.moveTo(startX, y + 10).lineTo(560, y + 10).stroke();
+        if (abaixoMinimo.length > 0) {
+            if (y > 700) {
+                doc.addPage();
+                y = 50;
+            }
 
-        doc
-            .fontSize(9)
-            .text(
-                'Relatório gerado automaticamente pelo sistema Recapadora SaaS.',
-                startX,
-                y + 20,
-                { align: 'center' }
-            );
+            y += 20;
+
+            doc.font('Helvetica-Bold').fontSize(12).text('Bandas com necessidade de reposição:', startX, y);
+            y += 20;
+
+            doc.font('Helvetica').fontSize(10);
+
+            abaixoMinimo.forEach(item => {
+                if (y > 770) {
+                    doc.addPage();
+                    y = 50;
+                }
+
+                doc.text(
+                    `• ${item.codigo} - ${item.descricao || '-'} | Estoque: ${item.estoque_total} | Mínimo: ${item.estoque_minimo}`,
+                    startX,
+                    y
+                );
+
+                y += 16;
+            });
+        }
 
         doc.end();
 
