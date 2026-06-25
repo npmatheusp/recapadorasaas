@@ -104,6 +104,10 @@ function filtrarBandas() {
     renderizarTabela(filtradas);
 }
 
+function gerarPdfEstoque() {
+    window.open('/api/bandas/pdf', '_blank');
+}
+
 async function salvarBanda() {
     const perfil = getPerfil();
     const token = getToken();
@@ -230,3 +234,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     carregarBandas();
 });
+

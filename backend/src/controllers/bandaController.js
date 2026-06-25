@@ -262,3 +262,9 @@ exports.disponibilidade = async (req, res) => {
         });
     }
 };
+
+exports.gerarPdfEstoque = async (req, res) => {
+   // consulta bandas
+   // gera pdf
+   // envia download
+};

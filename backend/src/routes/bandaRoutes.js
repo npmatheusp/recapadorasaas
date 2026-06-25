@@ -27,4 +27,6 @@ router.delete('/:id', auth, permissao('ADMIN'), bandaController.excluir);
 
 router.patch('/:id/status', auth, permissao('ADMIN'), bandaController.alterarStatus);
 
+router.get('/pdf', auth, bandaController.gerarPdfEstoque);
+
 module.exports = router;
