@@ -156,7 +156,7 @@ exports.editar = async (req, res) => {
 };
 
 // ======================================================
-// EXCLUIR (DESATIVAR)
+// EXCLUIR
 // ======================================================
 exports.excluir = async (req, res) => {
     try {
@@ -477,7 +477,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // ✔️ CORREÇÃO DEFINITIVA DA PAGINAÇÃO
+        // 🔥 CORREÇÃO FINAL: REMOVE PÁGINAS EM BRANCO
         // ==================================================
         const range = doc.bufferedPageRange();
 
@@ -490,7 +490,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     40,
-                    doc.page.height - 20, // 👈 FIXO DENTRO DA PÁGINA
+                    doc.page.height - 25,
                     {
                         width: doc.page.width - 80,
                         align: 'center'
