@@ -477,12 +477,16 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // 🔥 CORREÇÃO FINAL: REMOVE PÁGINAS EM BRANCO
+        // 🔥 CORREÇÃO RE REALIZADA AQUI:
         // ==================================================
         const range = doc.bufferedPageRange();
 
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
+
+            // Guardamos a margem original e alteramos para 0 temporariamente
+            const margemInferiorOriginal = doc.page.margins.bottom;
+            doc.page.margins.bottom = 0;
 
             doc.font('Helvetica')
                 .fontSize(9)
@@ -496,6 +500,9 @@ exports.gerarPdfEstoque = async (req, res) => {
                         align: 'center'
                     }
                 );
+
+            // Restauramos a margem original da página
+            doc.page.margins.bottom = margemInferiorOriginal;
         }
 
         doc.end();
