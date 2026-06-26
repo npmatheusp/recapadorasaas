@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda updated com sucesso'
+            mensagem: 'Banda atualizada com sucesso'
         });
 
     } catch (error) {
@@ -224,7 +224,7 @@ exports.alterarStatus = async (req, res) => {
 // ======================================================
 exports.entradaEstoque = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = params;
         const { quantidade } = req.body;
 
         const qtd = Number(quantidade);
@@ -318,7 +318,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
     const margem = 25;
 
     doc.font('Helvetica-Bold')
-        .fontSize(14)
+        .fontSize(13)
         .fillColor('#0b2c66')
         .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 15, {
             width: largura - margem * 2,
@@ -326,71 +326,71 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
         });
 
     doc.font('Helvetica-Bold')
-        .fontSize(11)
+        .fontSize(10)
         .fillColor('#333')
-        .text(`RELATÓRIO DE ESTOQUE DE BANDAS  |  ${dataHora}`, margem, 32, {
+        .text(`RELATÓRIO DE ESTOQUE DE BANDAS  |  ${dataHora}`, margem, 30, {
             width: largura - margem * 2,
             align: 'center'
         });
 
-    doc.moveTo(margem, 46)
-        .lineTo(largura - margem, 46)
+    doc.moveTo(margem, 42)
+        .lineTo(largura - margem, 42)
         .strokeColor('#0b2c66')
         .stroke();
 }
 
 // ======================================================
-// COMPONENTES DA TABELA COMPACTA (DUAS COLUNAS)
+// COMPONENTES DA TABELA ULTRA COMPACTA
 // ======================================================
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
-    const colCodigo = Math.floor(larguraColuna * 0.65);
-    const colEstoque = Math.floor(larguraColuna * 0.20);
+    const colCodigo = Math.floor(larguraColuna * 0.68);
+    const colEstoque = Math.floor(larguraColuna * 0.18);
     const colAtivo = larguraColuna - colCodigo - colEstoque;
 
-    doc.rect(x, y, larguraColuna, 16).fill('#dfe8f3');
-    doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(8.5);
+    doc.rect(x, y, larguraColuna, 12).fill('#dfe8f3');
+    doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(7.5);
 
-    doc.text('Código / Descrição', x + 4, y + 4, { width: colCodigo - 6 });
-    doc.text('Est.', x + colCodigo + 2, y + 4, { width: colEstoque - 4, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colEstoque + 2, y + 4, { width: colAtivo - 4, align: 'center' });
+    doc.text('Código / Descrição', x + 4, y + 2.5, { width: colCodigo - 6 });
+    doc.text('Est.', x + colCodigo + 2, y + 2.5, { width: colEstoque - 4, align: 'center' });
+    doc.text('Ativo', x + colCodigo + colEstoque + 2, y + 2.5, { width: colAtivo - 4, align: 'center' });
 
-    return y + 16;
+    return y + 12;
 }
 
 function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false) {
-    const colCodigo = Math.floor(larguraColuna * 0.65);
-    const colEstoque = Math.floor(larguraColuna * 0.20);
+    const colCodigo = Math.floor(larguraColuna * 0.68);
+    const colEstoque = Math.floor(larguraColuna * 0.18);
     const colAtivo = larguraColuna - colCodigo - colEstoque;
 
     if (zebra) {
-        doc.rect(x, y, larguraColuna, 15).fill('#f7f9fc');
+        doc.rect(x, y, larguraColuna, 11).fill('#f7f9fc');
     }
 
-    doc.moveTo(x, y + 15)
-        .lineTo(x + larguraColuna, y + 15)
+    doc.moveTo(x, y + 11)
+        .lineTo(x + larguraColuna, y + 11)
         .strokeColor('#eee')
         .stroke();
 
-    doc.fillColor('#222').font('Helvetica').fontSize(8);
+    doc.fillColor('#222').font('Helvetica').fontSize(7.5);
 
     const texto = item.descricao ? `${item.codigo} - ${item.descricao}` : item.codigo;
-    doc.text(texto, x + 4, y + 3.5, { width: colCodigo - 6, ellipsis: true });
+    doc.text(texto, x + 4, y + 2, { width: colCodigo - 6, ellipsis: true });
 
-    doc.text(String(item.estoque_total || 0), x + colCodigo + 2, y + 3.5, {
+    doc.text(String(item.estoque_total || 0), x + colCodigo + 2, y + 2, {
         width: colEstoque - 4,
         align: 'center'
     });
 
-    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 2, y + 3.5, {
+    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 2, y + 2, {
         width: colAtivo - 4,
         align: 'center'
     });
 
-    return y + 15;
+    return y + 11;
 }
 
 // ======================================================
-// PDF PRINCIPAL (FORÇADO EM 1 FOLHA)
+// PDF PRINCIPAL (1 FOLHA SEM BUG)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -413,7 +413,6 @@ exports.gerarPdfEstoque = async (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename=estoque.pdf');
 
-        // Configura o documento em modo PAISAGEM (Landscape) e margens pequenas
         const doc = new PDFDocument({
             size: 'A4',
             layout: 'landscape',
@@ -426,14 +425,13 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Definições de posicionamento em 2 Colunas
         const margemEsquerda = 25;
         const espacoEntreColunas = 20;
         const larguraUtil = doc.page.width - (margemEsquerda * 2); 
         const larguraColuna = (larguraUtil - espacoEntreColunas) / 2;
 
-        const yInicial = 55;
-        const yLimiteInferior = doc.page.height - 35; // Deixa espaço para o rodapé
+        const yInicial = 50;
+        const yLimiteInferior = doc.page.height - 30; 
 
         let xAtual = margemEsquerda;
         let yAtual = yInicial;
@@ -442,47 +440,44 @@ exports.gerarPdfEstoque = async (req, res) => {
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
             
-            // Calcula a altura necessária para este bloco (Título do grupo + Cabeçalho da tabela + Linhas)
-            const alturaBloco = 16 + 16 + (itensDoGrupo.length * 15) + 8;
+            // Título (13) + Cabeçalho (12) + Linhas (N * 11) + Espaço Extra (4)
+            const alturaBloco = 13 + 12 + (itensDoGrupo.length * 11) + 4;
 
-            // Se o bloco estourar o limite inferior, pula para a coluna da direita ou reduz riscos
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
                     xAtual = margemEsquerda + larguraColuna + espacoEntreColunas;
                     yAtual = yInicial;
                 }
-                // Se já estiver na coluna 2 e mesmo assim estourar, o PDFKit criará a folha 2 automaticamente, 
-                // mas com essa arquitetura ultra compacta em modo Paisagem, tudo caberá na folha 1.
             }
 
             // Desenha o Título do Grupo de Banda
             doc.font('Helvetica-Bold')
-                .fontSize(10)
+                .fontSize(8.5)
                 .fillColor('#0b2c66')
-                .text(`BANDA: ${grupo}`, xAtual, yAtual + 3);
+                .text(`BANDA: ${grupo}`, xAtual, yAtual + 2);
             
-            yAtual += 16;
+            yAtual += 13;
 
-            // Desenha a tabela do grupo na coluna atual
-            yAtual = desenharCabecalhoTabela(doc, xAtual, yAtual, larguraColuna);
+            // Desenha a tabela do grupo
+            yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
             itensDoGrupo.forEach((item, idx) => {
                 yAtual = desenharLinhaTabelaColuna(doc, xAtual, yAtual, larguraColuna, item, idx % 2 !== 0);
             });
 
-            yAtual += 8; // Espaçamento leve entre um grupo e outro
+            yAtual += 4; 
         });
 
         // ==================================================
-        // RODAPÉ CORRIGIDO (SEM PRODUZIR PÁGINAS EXTRAS)
+        // 🔥 CORREÇÃO DEFINITIVA DO BUG DA PÁGINA EM BRANCO
         // ==================================================
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
 
             const margemInferiorOriginal = doc.page.margins.bottom;
-            doc.page.margins.bottom = 0;
+            doc.page.margins.bottom = 0; // Impede o PDFKit de criar folhas fantasmas
 
             doc.font('Helvetica')
                 .fontSize(8)
@@ -490,7 +485,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 .text(
                     `Página ${i + 1} de ${range.count}`,
                     25,
-                    doc.page.height - 20,
+                    doc.page.height - 18,
                     {
                         width: doc.page.width - 50,
                         align: 'center'
@@ -507,8 +502,3 @@ exports.gerarPdfEstoque = async (req, res) => {
         return res.status(500).json({ mensagem: 'Erro ao gerar PDF' });
     }
 };
-
-// Helper interno ajustado para receber coordenadas dinâmicas
-function desenharCabecalhoTabela(doc, x, y, larguraColuna) {
-    return desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna);
-}
