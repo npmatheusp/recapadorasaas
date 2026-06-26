@@ -224,7 +224,7 @@ exports.alterarStatus = async (req, res) => {
 // ======================================================
 exports.entradaEstoque = async (req, res) => {
     try {
-        const { id } = params;
+        const { id } = req.params;
         const { quantidade } = req.body;
 
         const qtd = Number(quantidade);
@@ -315,82 +315,82 @@ function extrairGrupoBanda(codigo = '') {
 // ======================================================
 function desenharCabecalhoPaisagem(doc, dataHora) {
     const largura = doc.page.width;
-    const margem = 25;
+    const margem = 20;
 
     doc.font('Helvetica-Bold')
-        .fontSize(13)
+        .fontSize(12)
         .fillColor('#0b2c66')
-        .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 15, {
+        .text('DO VALE PRUDENTE PNEUS E RECAPAGENS LTDA', margem, 12, {
             width: largura - margem * 2,
             align: 'center'
         });
 
     doc.font('Helvetica-Bold')
-        .fontSize(10)
+        .fontSize(9)
         .fillColor('#333')
-        .text(`RELATÓRIO DE ESTOQUE DE BANDAS  |  ${dataHora}`, margem, 30, {
+        .text(`RELATÓRIO DE ESTOQUE DE BANDAS  |  ${dataHora}`, margem, 26, {
             width: largura - margem * 2,
             align: 'center'
         });
 
-    doc.moveTo(margem, 42)
-        .lineTo(largura - margem, 42)
+    doc.moveTo(margem, 38)
+        .lineTo(largura - margem, 38)
         .strokeColor('#0b2c66')
         .stroke();
 }
 
 // ======================================================
-// COMPONENTES DA TABELA ULTRA COMPACTA
+// COMPONENTES DA TABELA ULTRA COMPACTA (3 COLUNAS)
 // ======================================================
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
     const colCodigo = Math.floor(larguraColuna * 0.68);
-    const colEstoque = Math.floor(larguraColuna * 0.18);
+    const colEstoque = Math.floor(larguraColuna * 0.16);
     const colAtivo = larguraColuna - colCodigo - colEstoque;
 
-    doc.rect(x, y, larguraColuna, 12).fill('#dfe8f3');
-    doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(7.5);
+    doc.rect(x, y, larguraColuna, 11).fill('#dfe8f3');
+    doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(7);
 
-    doc.text('Código / Descrição', x + 4, y + 2.5, { width: colCodigo - 6 });
-    doc.text('Est.', x + colCodigo + 2, y + 2.5, { width: colEstoque - 4, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colEstoque + 2, y + 2.5, { width: colAtivo - 4, align: 'center' });
-
-    return y + 12;
-}
-
-function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false) {
-    const colCodigo = Math.floor(larguraColuna * 0.68);
-    const colEstoque = Math.floor(larguraColuna * 0.18);
-    const colAtivo = larguraColuna - colCodigo - colEstoque;
-
-    if (zebra) {
-        doc.rect(x, y, larguraColuna, 11).fill('#f7f9fc');
-    }
-
-    doc.moveTo(x, y + 11)
-        .lineTo(x + larguraColuna, y + 11)
-        .strokeColor('#eee')
-        .stroke();
-
-    doc.fillColor('#222').font('Helvetica').fontSize(7.5);
-
-    const texto = item.descricao ? `${item.codigo} - ${item.descricao}` : item.codigo;
-    doc.text(texto, x + 4, y + 2, { width: colCodigo - 6, ellipsis: true });
-
-    doc.text(String(item.estoque_total || 0), x + colCodigo + 2, y + 2, {
-        width: colEstoque - 4,
-        align: 'center'
-    });
-
-    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 2, y + 2, {
-        width: colAtivo - 4,
-        align: 'center'
-    });
+    doc.text('Código / Descrição', x + 3, y + 2, { width: colCodigo - 4 });
+    doc.text('Est.', x + colCodigo + 1, y + 2, { width: colEstoque - 2, align: 'center' });
+    doc.text('Ativo', x + colCodigo + colEstoque + 1, y + 2, { width: colAtivo - 2, align: 'center' });
 
     return y + 11;
 }
 
+function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false) {
+    const colCodigo = Math.floor(larguraColuna * 0.68);
+    const colEstoque = Math.floor(larguraColuna * 0.16);
+    const colAtivo = larguraColuna - colCodigo - colEstoque;
+
+    if (zebra) {
+        doc.rect(x, y, larguraColuna, 10).fill('#f7f9fc');
+    }
+
+    doc.moveTo(x, y + 10)
+        .lineTo(x + larguraColuna, y + 10)
+        .strokeColor('#eee')
+        .stroke();
+
+    doc.fillColor('#222').font('Helvetica').fontSize(7);
+
+    const texto = item.descricao ? `${item.codigo} - ${item.descricao}` : item.codigo;
+    doc.text(texto, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+
+    doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
+        width: colEstoque - 2,
+        align: 'center'
+    });
+
+    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 1, y + 1.5, {
+        width: colAtivo - 2,
+        align: 'center'
+    });
+
+    return y + 10;
+}
+
 // ======================================================
-// PDF PRINCIPAL (1 FOLHA SEM BUG)
+// PDF PRINCIPAL (1 FOLHA EM 3 COLUNAS)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -416,7 +416,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         const doc = new PDFDocument({
             size: 'A4',
             layout: 'landscape',
-            margin: 25,
+            margin: 20,
             bufferPages: true
         });
 
@@ -425,13 +425,14 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        const margemEsquerda = 25;
-        const espacoEntreColunas = 20;
+        // Configuração de Espaço Dinâmico para 3 Colunas horizontais
+        const margemEsquerda = 20;
+        const espacoEntreColunas = 15;
         const larguraUtil = doc.page.width - (margemEsquerda * 2); 
-        const larguraColuna = (larguraUtil - espacoEntreColunas) / 2;
+        const larguraColuna = (larguraUtil - (espacoEntreColunas * 2)) / 3;
 
-        const yInicial = 50;
-        const yLimiteInferior = doc.page.height - 30; 
+        const yInicial = 46;
+        const yLimiteInferior = doc.page.height - 25; // Margem de segurança rigorosa contra quebras automáticas
 
         let xAtual = margemEsquerda;
         let yAtual = yInicial;
@@ -440,26 +441,38 @@ exports.gerarPdfEstoque = async (req, res) => {
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
             
-            // Título (13) + Cabeçalho (12) + Linhas (N * 11) + Espaço Extra (4)
-            const alturaBloco = 13 + 12 + (itensDoGrupo.length * 11) + 4;
+            // Título (12) + Cabeçalho (11) + Linhas (N * 10) + Espaço entre blocos (4)
+            const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
 
+            // Gerenciamento estrito de colunas e páginas manuais
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
                     xAtual = margemEsquerda + larguraColuna + espacoEntreColunas;
+                    yAtual = yInicial;
+                } else if (colunaAtual === 2) {
+                    colunaAtual = 3;
+                    xAtual = margemEsquerda + (larguraColuna * 2) + (espacoEntreColunas * 2);
+                    yAtual = yInicial;
+                } else {
+                    // Caso extremo de estouro da página 1, abre uma nova folha limpa
+                    doc.addPage();
+                    desenharCabecalhoPaisagem(doc, dataHora);
+                    colunaAtual = 1;
+                    xAtual = margemEsquerda;
                     yAtual = yInicial;
                 }
             }
 
             // Desenha o Título do Grupo de Banda
             doc.font('Helvetica-Bold')
-                .fontSize(8.5)
+                .fontSize(8)
                 .fillColor('#0b2c66')
-                .text(`BANDA: ${grupo}`, xAtual, yAtual + 2);
+                .text(`BANDA: ${grupo}`, xAtual, yAtual + 1);
             
-            yAtual += 13;
+            yAtual += 12;
 
-            // Desenha a tabela do grupo
+            // Desenha a tabela compacta
             yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
             itensDoGrupo.forEach((item, idx) => {
@@ -470,24 +483,24 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // 🔥 CORREÇÃO DEFINITIVA DO BUG DA PÁGINA EM BRANCO
+        // RODAPÉ PROTEGIDO CONTRA CRIAÇÃO DE PÁGINAS FANTASMAS
         // ==================================================
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
 
             const margemInferiorOriginal = doc.page.margins.bottom;
-            doc.page.margins.bottom = 0; // Impede o PDFKit de criar folhas fantasmas
+            doc.page.margins.bottom = 0; 
 
             doc.font('Helvetica')
-                .fontSize(8)
+                .fontSize(7.5)
                 .fillColor('#666')
                 .text(
                     `Página ${i + 1} de ${range.count}`,
-                    25,
-                    doc.page.height - 18,
+                    20,
+                    doc.page.height - 15,
                     {
-                        width: doc.page.width - 50,
+                        width: doc.page.width - 40,
                         align: 'center'
                     }
                 );
