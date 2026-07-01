@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
 // =========================
 // SESSÃO
 // =========================
@@ -30,13 +29,11 @@ function getUsuario() {
 
 function validarSessao() {
     const token = getToken();
-
     if (!token) {
         alert('Sessão expirada. Faça login novamente.');
         window.location.href = 'login.html';
     }
 }
-
 
 // =========================
 // CARREGAR BANDAS
@@ -44,13 +41,9 @@ function validarSessao() {
 async function carregarBandas() {
     try {
         const token = getToken();
-
         const response = await fetch(`${API}/producao/bandas`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
         });
-
         const bandas = await response.json();
 
         if (!response.ok) {
@@ -60,13 +53,11 @@ async function carregarBandas() {
 
         bandasCache = bandas;
         configurarBuscaBandas();
-
     } catch (error) {
         console.error(error);
         alert('Erro ao carregar bandas');
     }
 }
-
 
 // =========================
 // BUSCA DE BANDAS
@@ -79,8 +70,6 @@ function configurarBuscaBandas() {
 
     campoBusca.addEventListener('input', () => {
         const termo = campoBusca.value.toLowerCase().trim();
-
-        // limpa seleção anterior se o usuário começar a digitar novamente
         document.getElementById('banda').value = '';
 
         if (!termo) {
@@ -98,10 +87,7 @@ function configurarBuscaBandas() {
     });
 
     document.addEventListener('click', (e) => {
-        if (
-            !campoBusca.contains(e.target) &&
-            !resultado.contains(e.target)
-        ) {
+        if (!campoBusca.contains(e.target) && !resultado.contains(e.target)) {
             resultado.style.display = 'none';
         }
     });
@@ -109,42 +95,24 @@ function configurarBuscaBandas() {
 
 function renderizarResultadosBandas(bandas) {
     const resultado = document.getElementById('resultadoBandas');
-
     if (!resultado) return;
 
     if (!bandas.length) {
-        resultado.innerHTML = `
-            <div class="item-banda text-muted">
-                Nenhuma banda encontrada
-            </div>
-        `;
+        resultado.innerHTML = `<div class="item-banda text-muted">Nenhuma banda encontrada</div>`;
         resultado.style.display = 'block';
         return;
     }
 
     resultado.innerHTML = '';
-
     bandas.forEach(banda => {
         resultado.innerHTML += `
-            <div
-                class="item-banda"
-                onclick="selecionarBanda(${banda.id})"
-            >
-                <div class="banda-codigo">
-                    ${banda.codigo}
-                </div>
-
-                <div class="banda-descricao">
-                    ${banda.descricao || ''}
-                </div>
-
-                <div class="banda-estoque">
-                    Estoque: ${banda.estoque_total}
-                </div>
+            <div class="item-banda" onclick="selecionarBanda(${banda.id})">
+                <div class="banda-codigo">${banda.codigo}</div>
+                <div class="banda-descricao">${banda.descricao || ''}</div>
+                <div class="banda-estoque">Estoque: ${banda.estoque_total}</div>
             </div>
         `;
     });
-
     resultado.style.display = 'block';
 }
 
@@ -152,9 +120,7 @@ function selecionarBanda(id) {
     const banda = bandasCache.find(b => b.id === id);
     if (!banda) return;
 
-    document.getElementById('bandaBusca').value =
-        `${banda.codigo} - ${banda.descricao || ''}`;
-
+    document.getElementById('bandaBusca').value = `${banda.codigo} - ${banda.descricao || ''}`;
     document.getElementById('banda').value = banda.id;
 
     const resultado = document.getElementById('resultadoBandas');
@@ -164,20 +130,15 @@ function selecionarBanda(id) {
     }
 }
 
-
 // =========================
 // CARREGAR HISTÓRICO
 // =========================
 async function carregarHistorico() {
     try {
         const token = getToken();
-
         const response = await fetch(`${API}/producao/historico`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
         });
-
         const historico = await response.json();
 
         if (!response.ok) {
@@ -193,9 +154,7 @@ async function carregarHistorico() {
         if (!historico.length) {
             tabela.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center text-muted">
-                        Nenhum registro encontrado
-                    </td>
+                    <td colspan="6" class="text-center text-muted">Nenhum registro encontrado</td>
                 </tr>
             `;
             return;
@@ -209,26 +168,27 @@ async function carregarHistorico() {
                     <td>${item.descricao || ''}</td>
                     <td>${item.quantidade}</td>
                     <td>${item.observacao || ''}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-danger" onclick="cancelarProducao(${item.id})">
+                            Cancelar
+                        </button>
+                    </td>
                 </tr>
             `;
         });
-
     } catch (error) {
         console.error(error);
         alert('Erro ao carregar histórico');
     }
 }
 
-
 // =========================
 // REGISTRAR PRODUÇÃO
 // =========================
 async function registrarProducao(e) {
     e.preventDefault();
-
     try {
         const token = getToken();
-
         if (!token) {
             alert('Sessão expirada. Faça login novamente.');
             window.location.href = 'login.html';
@@ -249,11 +209,7 @@ async function registrarProducao(e) {
             return;
         }
 
-        const body = {
-            banda_id: bandaId,
-            quantidade,
-            observacao
-        };
+        const body = { banda_id: bandaId, quantidade, observacao };
 
         const response = await fetch(`${API}/producao`, {
             method: 'POST',
@@ -272,7 +228,6 @@ async function registrarProducao(e) {
         }
 
         alert(resultado.mensagem || 'Produção registrada com sucesso');
-
         document.getElementById('formProducao').reset();
         document.getElementById('banda').value = '';
 
@@ -284,13 +239,44 @@ async function registrarProducao(e) {
 
         await carregarBandas();
         await carregarHistorico();
-
     } catch (error) {
         console.error(error);
         alert('Erro ao registrar produção');
     }
 }
 
+// =========================
+// 🔥 NOVA FUNÇÃO: CANCELAR PRODUÇÃO
+// =========================
+async function cancelarProducao(id) {
+    if (!confirm('Tem certeza que deseja cancelar esta produção? A quantidade retornará ao estoque.')) {
+        return;
+    }
+
+    try {
+        const token = getToken();
+        const response = await fetch(`${API}/producao/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const resultado = await response.json();
+
+        if (!response.ok) {
+            alert(resultado.mensagem || 'Erro ao cancelar produção');
+            return;
+        }
+
+        alert(resultado.mensagem);
+        
+        // Recarrega as listas para atualizar a interface com os novos estoques
+        await carregarBandas();
+        await carregarHistorico();
+    } catch (error) {
+        console.error(error);
+        alert('Erro ao processar o cancelamento.');
+    }
+}
 
 // =========================
 // NAVEGAÇÃO
@@ -305,7 +291,6 @@ function sairSistema() {
         localStorage.removeItem('usuario');
         localStorage.removeItem('perfil');
         localStorage.removeItem('nome');
-
         window.location.href = 'login.html';
     }
 }

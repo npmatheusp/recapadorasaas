@@ -1,123 +1,67 @@
 const pool = require('../config/database');
 
 exports.bandasDisponiveis = async (req, res) => {
-
     try {
-
         const [rows] = await pool.execute(`
-            SELECT
-                id,
-                codigo,
-                descricao,
-                estoque_total
+            SELECT id, codigo, descricao, estoque_total
             FROM bandas
             WHERE ativo = TRUE
             ORDER BY codigo
         `);
-
         res.json(rows);
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ mensagem: 'Erro ao carregar bandas' });
     }
-
 };
 
-
 exports.registrar = async (req, res) => {
-
     const conn = await pool.getConnection();
-
     try {
-
         await conn.beginTransaction();
 
-        const {
-            banda_id,
-            quantidade,
-            observacao
-        } = req.body;
-
-        const usuario_id = req.usuario.id; // 🔥 AGORA VEM DO TOKEN
-
+        const { banda_id, quantidade, observacao } = req.body;
+        const usuario_id = req.usuario.id; 
         const qtd = Number(quantidade);
 
         const [[banda]] = await conn.execute(`
-            SELECT estoque_total
-            FROM bandas
-            WHERE id = ?
+            SELECT estoque_total FROM bandas WHERE id = ?
         `, [banda_id]);
 
         if (!banda) {
             await conn.rollback();
-            return res.status(404).json({
-                mensagem: 'Banda não encontrada'
-            });
+            return res.status(404).json({ mensagem: 'Banda não encontrada' });
         }
 
         if (banda.estoque_total < qtd) {
             await conn.rollback();
-            return res.status(400).json({
-                mensagem: 'Estoque insuficiente'
-            });
+            return res.status(400).json({ mensagem: 'Estoque insuficiente' });
         }
 
         await conn.execute(`
-            UPDATE bandas
-            SET estoque_total = estoque_total - ?
-            WHERE id = ?
+            UPDATE bandas SET estoque_total = estoque_total - ? WHERE id = ?
         `, [qtd, banda_id]);
 
         await conn.execute(`
-            INSERT INTO producao
-            (
-                banda_id,
-                usuario_id,
-                quantidade,
-                observacao
-            )
-            VALUES
-            (
-                ?, ?, ?, ?
-            )
-        `, [
-            banda_id,
-            usuario_id,
-            qtd,
-            observacao || null
-        ]);
+            INSERT INTO producao (banda_id, usuario_id, quantidade, observacao)
+            VALUES (?, ?, ?, ?)
+        `, [banda_id, usuario_id, qtd, observacao || null]);
 
         await conn.commit();
-
-        res.json({
-            mensagem: 'Produção registrada com sucesso'
-        });
-
+        res.json({ mensagem: 'Produção registrada com sucesso' });
     } catch (error) {
-
         await conn.rollback();
-
         console.error(error);
-
-        res.status(500).json({
-            mensagem: 'Erro ao registrar produção'
-        });
-
+        res.status(500).json({ mensagem: 'Erro ao registrar produção' });
     } finally {
-
         conn.release();
     }
-
 };
 
-
 exports.historico = async (req, res) => {
-
     try {
-
         const [rows] = await pool.execute(`
-            SELECT
+            SELECT 
                 p.id,
                 b.codigo,
                 b.descricao,
@@ -125,18 +69,53 @@ exports.historico = async (req, res) => {
                 p.observacao,
                 p.criado_em
             FROM producao p
-            INNER JOIN bandas b
-                ON b.id = p.banda_id
+            INNER JOIN bandas b ON b.id = p.banda_id
             ORDER BY p.id DESC
         `);
-
         res.json(rows);
-
     } catch (error) {
         console.error(error);
-        res.status(500).json({
-            mensagem: 'Erro ao buscar histórico'
-        });
+        res.status(500).json({ mensagem: 'Erro ao buscar histórico' });
     }
+};
 
+// 🔥 NOVA FUNÇÃO: CANCELAR E DEVOLVER ESTOQUE
+exports.cancelar = async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const { id } = req.params;
+
+        // 1. Busca a produção existente para saber a quantidade e qual era a banda
+        const [[producao]] = await conn.execute(`
+            SELECT banda_id, quantidade FROM producao WHERE id = ?
+        `, [id]);
+
+        if (!producao) {
+            await conn.rollback();
+            return res.status(404).json({ mensagem: 'Registro de produção não encontrado' });
+        }
+
+        // 2. Devolve a quantidade gasta de volta ao estoque da banda
+        await conn.execute(`
+            UPDATE bandas 
+            SET estoque_total = estoque_total + ? 
+            WHERE id = ?
+        `, [producao.quantidade, producao.banda_id]);
+
+        // 3. Deleta o registro da produção
+        await conn.execute(`
+            DELETE FROM producao WHERE id = ?
+        `, [id]);
+
+        await conn.commit();
+        res.json({ mensagem: 'Produção cancelada e estoque estornado com sucesso!' });
+    } catch (error) {
+        await conn.rollback();
+        console.error(error);
+        res.status(500).json({ mensagem: 'Erro ao cancelar produção' });
+    } finally {
+        conn.release();
+    }
 };
