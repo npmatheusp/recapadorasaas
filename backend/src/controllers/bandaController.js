@@ -352,7 +352,7 @@ function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
 
     doc.text('Código / Descrição', x + 3, y + 2, { width: colCodigo - 4 });
     doc.text('Est.', x + colCodigo + 1, y + 2, { width: colEstoque - 2, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colEstoque + 1, y + 2, { width: colAtivo - 2, align: 'center' });
+    doc.text('Ativo', x + colCodigo + colAtivo + 1, y + 2, { width: colAtivo - 2, align: 'center' });
 
     return y + 11;
 }
@@ -373,7 +373,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // Mantém exatamente a string crua e limpa do código do banco (ex: "HDC1 225L-BANDA")
+    // Renderiza exatamente o código salvo no banco de dados (ex: "HDC1 225L-BANDA", "RDMAX 220M-ANEL")
     const textoExibicao = String(item.codigo || '').trim();
 
     doc.text(textoExibicao, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
@@ -403,7 +403,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo primeiro termo (Desenho)
+        // Agrupamento estrito pelo primeiro prefixo
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -462,7 +462,6 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Escreve o cabeçalho do desenho
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
