@@ -166,22 +166,16 @@
 </div>
 
 <script>
+    // Recupera o perfil do localStorage para controle de telas
     const perfil = localStorage.getItem('perfil');
-    const token = localStorage.getItem('token');
 
-    // 🔒 Proteção de sessão contra acessos sem login
-    if (!token || !perfil) {
-        alert("Sessão expirada. Faça login novamente.");
-        window.location.href = 'login.html';
-    }
-
-    // 🛡️ Controle de visibilidade baseado em perfis
+    // 🛡️ Controle de visibilidade baseado em perfis (Apenas ADMIN vê compras e suas respectivas telas)
     if (perfil === 'VENDEDOR') {
         const producao = document.getElementById('menuProducao');
         const compras = document.getElementById('menuCompras');
         
         if (producao) producao.style.display = 'none';
-        if (compras) compras.style.display = 'none'; // Esconde compras de Vendedor
+        if (compras) compras.style.display = 'none'; 
     }
 
     if (perfil === 'PRODUCAO') {
@@ -189,7 +183,7 @@
         const compras = document.getElementById('menuCompras');
         
         if (bandas) bandas.style.display = 'none';
-        if (compras) compras.style.display = 'none'; // Esconde compras de Produção
+        if (compras) compras.style.display = 'none'; 
     }
 
     function logout(){
