@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda atualizada com sucesso'
+            mensagem: 'Banda updated com sucesso'
         });
 
     } catch (error) {
@@ -310,6 +310,16 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
+// Limpa sufixos inúteis como "-BANDA" ou "-ANEL"
+function limparSufixoInutil(textoBruto) {
+    if (!textoBruto) return '';
+    return String(textoBruto)
+        .replace(/-?\s*BANDA/gi, '') 
+        .replace(/-?\s*ANÉL/gi, '')  
+        .replace(/-?\s*ANEL/gi, '')  
+        .trim();
+}
+
 // ======================================================
 // CABEÇALHO COMPACTO (PAISAGEM)
 // ======================================================
@@ -352,7 +362,7 @@ function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
 
     doc.text('Código / Descrição', x + 3, y + 2, { width: colCodigo - 4 });
     doc.text('Est.', x + colCodigo + 1, y + 2, { width: colEstoque - 2, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colAtivo + 1, y + 2, { width: colAtivo - 2, align: 'center' });
+    doc.text('Ativo', x + colCodigo + colEstoque + 1, y + 2, { width: colAtivo - 2, align: 'center' });
 
     return y + 11;
 }
@@ -373,10 +383,20 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // Renderiza exatamente o código salvo no banco de dados (ex: "HDC1 225L-BANDA", "RDMAX 220M-ANEL")
-    const textoExibicao = String(item.codigo || '').trim();
+    // 🎯 LÓGICA DO HDC1 APLICADA CORRETAMENTE A TODOS OS ITEMS:
+    // Limpa o código e a descrição de sufixos. Se houver descrição diferente, concatena com " - ".
+    const codigoLimpo = limparSufixoInutil(item.codigo);
+    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : '';
 
-    doc.text(textoExibicao, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+    let textoFormatado = codigoLimpo;
+    if (descLimpa && descLimpa !== codigoLimpo) {
+        textoFormatado = `${codigoLimpo} - ${descLimpa}`;
+    } else {
+        // Se não tiver descrição separada ou for igual, segue o padrão repetido do HDC1
+        textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
+    }
+
+    doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
     doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
         width: colEstoque - 2,
@@ -403,7 +423,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo primeiro prefixo
+        // Agrupamento estrito pelo desenho inicial do código (ex: HDC1, RDMAX, RTAR11, etc.)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -462,6 +482,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
+            // Título dinâmico para cada respectivo desenho (Ex: BANDA: HDC1, BANDA: RDMAX, etc.)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -478,7 +499,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Paginação do rodapé
+        // Rodapé de paginação
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
