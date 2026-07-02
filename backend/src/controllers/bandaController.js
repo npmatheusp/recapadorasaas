@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda updated com sucesso'
+            mensagem: 'Banda atualizada com sucesso'
         });
 
     } catch (error) {
@@ -208,7 +208,7 @@ exports.alterarStatus = async (req, res) => {
         `, [novoStatus, id]);
 
         return res.json({
-            mensagem: 'Status atualizado com sucesso'
+            mensagem: 'Status updated com sucesso'
         });
 
     } catch (error) {
@@ -310,16 +310,6 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
-// Limpa sufixos inúteis como "-BANDA" ou "-ANEL"
-function limparSufixoInutil(textoBruto) {
-    if (!textoBruto) return '';
-    return String(textoBruto)
-        .replace(/-?\s*BANDA/gi, '') 
-        .replace(/-?\s*ANÉL/gi, '')  
-        .replace(/-?\s*ANEL/gi, '')  
-        .trim();
-}
-
 // ======================================================
 // CABEÇALHO COMPACTO (PAISAGEM)
 // ======================================================
@@ -383,20 +373,10 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 LÓGICA DO HDC1 APLICADA CORRETAMENTE A TODOS OS ITEMS:
-    // Limpa o código e a descrição de sufixos. Se houver descrição diferente, concatena com " - ".
-    const codigoLimpo = limparSufixoInutil(item.codigo);
-    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : '';
+    // Renderiza a string limpa e crua que vem do campo codigo (ex: "600082 - RDMAX 260M" ou "HDC1 225L-BANDA")
+    const textoExibicao = String(item.codigo || '').trim();
 
-    let textoFormatado = codigoLimpo;
-    if (descLimpa && descLimpa !== codigoLimpo) {
-        textoFormatado = `${codigoLimpo} - ${descLimpa}`;
-    } else {
-        // Se não tiver descrição separada ou for igual, segue o padrão repetido do HDC1
-        textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
-    }
-
-    doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+    doc.text(textoExibicao, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
     doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
         width: colEstoque - 2,
@@ -423,7 +403,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo desenho inicial do código (ex: HDC1, RDMAX, RTAR11, etc.)
+        // Agrupamento estrito pelo modelo inicial (ex: RDMAX, HDC1, etc.)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -462,7 +442,9 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
-            const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
+            
+            // Cada bloco de item agora consome: cabeçalho da tabela (11px) + linha do item (10px)
+            const alturaBloco = 12 + (itensDoGrupo.length * (11 + 10)) + 4;
 
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
@@ -482,7 +464,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Título dinâmico para cada respectivo desenho (Ex: BANDA: HDC1, BANDA: RDMAX, etc.)
+            // Escreve o título do Grupo de Modelo (ex: BANDA: RDMAX)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -490,9 +472,9 @@ exports.gerarPdfEstoque = async (req, res) => {
             
             yAtual += 12;
 
-            yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
-
+            // Percorre os itens gerando um cabeçalho dedicado colado logo em cima de cada um deles
             itensDoGrupo.forEach((item, idx) => {
+                yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
                 yAtual = desenharLinhaTabelaColuna(doc, xAtual, yAtual, larguraColuna, item, idx % 2 !== 0);
             });
 
