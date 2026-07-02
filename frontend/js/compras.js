@@ -63,7 +63,9 @@ async function enviarXML(e) {
         }
 
         alert(msgSucesso);
-        formXml.reset();
+        
+        // 🎯 CORREÇÃO AQUI: e.target aponta direto para o formulário enviado, limpando o campo sem dar erro
+        e.target.reset();
 
     } catch (error) {
         console.error(error);
