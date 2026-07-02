@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda atualizada com sucesso'
+            mensagem: 'Banda updated com sucesso'
         });
 
     } catch (error) {
@@ -310,7 +310,7 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
-// Limpa de forma exata os sufixos "-BANDA" e "-ANEL"
+// Limpa sufixos inúteis como "-BANDA" ou "-ANEL"
 function limparSufixoInutil(textoBruto) {
     if (!textoBruto) return '';
     return String(textoBruto)
@@ -383,10 +383,18 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 AQUI ESTÁ A LÓGICA DO HDC1 APLICADA A TODOS:
-    // Ignoramos a variação do campo descrição e montamos o padrão replicado baseado no código puro.
+    // 🎯 LÓGICA DO HDC1 APLICADA CORRETAMENTE A TODOS OS ITEMS:
+    // Limpa o código e a descrição de sufixos. Se houver descrição diferente, concatena com " - ".
     const codigoLimpo = limparSufixoInutil(item.codigo);
-    const textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
+    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : '';
+
+    let textoFormatado = codigoLimpo;
+    if (descLimpa && descLimpa !== codigoLimpo) {
+        textoFormatado = `${codigoLimpo} - ${descLimpa}`;
+    } else {
+        // Se não tiver descrição separada ou for igual, segue o padrão repetido do HDC1
+        textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
+    }
 
     doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
@@ -415,7 +423,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo prefixo inicial (desenho)
+        // Agrupamento estrito pelo desenho inicial do código (ex: HDC1, RDMAX, RTAR11, etc.)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -474,7 +482,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Cabeçalho do Bloco correspondente (Ex: BANDA: HDC1, BANDA: RTTR11, etc.)
+            // Título dinâmico para cada respectivo desenho (Ex: BANDA: HDC1, BANDA: RDMAX, etc.)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -491,7 +499,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Rodapé de controle de páginas
+        // Rodapé de paginação
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
