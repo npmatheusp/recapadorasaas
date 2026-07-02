@@ -373,9 +373,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 LOGICA CORRETA IGUAL AO PDF EM ANEXO:
-    // Imprime exatamente a string do código (ex: "HDC1 225L-BANDA", "RTTR11 240S - ANEL")
-    // Sem concatenação com hífens ou duplicações.
+    // Mantém exatamente a string crua e limpa do código do banco (ex: "HDC1 225L-BANDA")
     const textoExibicao = String(item.codigo || '').trim();
 
     doc.text(textoExibicao, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
@@ -405,7 +403,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo primeiro nome (Desenho) (ex: HDC1, RTTR11, RDMAX...)
+        // Agrupamento estrito pelo primeiro termo (Desenho)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -464,7 +462,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Exibe o título do cabeçalho do bloco (ex: BANDA: HDC1, BANDA: RTTR11...)
+            // Escreve o cabeçalho do desenho
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -481,7 +479,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Rodapé de paginação dinâmico
+        // Paginação do rodapé
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
