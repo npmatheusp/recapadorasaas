@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda updated com sucesso'
+            mensagem: 'Banda atualizada com sucesso'
         });
 
     } catch (error) {
@@ -208,7 +208,7 @@ exports.alterarStatus = async (req, res) => {
         `, [novoStatus, id]);
 
         return res.json({
-            mensagem: 'Status atualizado com sucesso'
+            mensagem: 'Status updated com sucesso'
         });
 
     } catch (error) {
@@ -304,17 +304,19 @@ function formatarDataHoraBR() {
     }).format(new Date());
 }
 
+// 🎯 ESSA FUNÇÃO GARANTE O AGRUPAMENTO SEPARADO POR DESENHO (Ex: HDC1, UTDO31)
 function extrairGrupoBanda(codigo = '') {
     const texto = String(codigo).trim();
     const partes = texto.split(/\s+/);
     return partes[0] || 'SEM GRUPO';
 }
 
-// 🎯 FUNÇÃO AUXILIAR PARA LIMPAR TEXTO COMPACTO DO PDF
+// 🎯 LIMPA A PALAVRA "BANDA" E TRAÇOS REMANESCENTES DO TEXTO
 function limparTextoParaPdf(textoBruto) {
     if (!textoBruto) return '';
     return String(textoBruto)
-        .replace(/BANDA\s?/gi, '')  // Remove a palavra BANDA (independente de maiúscula/minúscula)
+        .replace(/BANDA\s?/gi, '') // Remove a palavra BANDA
+        .replace(/^\s*-\s*/, '')   // Remove hífen solto no início se houver
         .trim();
 }
 
@@ -336,7 +338,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
     doc.font('Helvetica-Bold')
         .fontSize(9)
         .fillColor('#333')
-        .text(`RELATÓRIO DE ESTOQUE RESUMIDO  |  ${dataHora}`, margem, 26, {
+        .text(`RELATÓRIO DE ESTOQUE RESUMIDO POR DESENHO  |  ${dataHora}`, margem, 26, {
             width: largura - margem * 2,
             align: 'center'
         });
@@ -378,8 +380,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 REMOVEU CÓDIGO E MANTEVE APENAS A DESCRIÇÃO LIMPA (Sem a palavra BANDA)
-    // Se não houver descrição preenchida, usa o código como plano B para não ficar em branco
+    // 🎯 MANTEVE O TRATAMENTO DE EXIBIÇÃO: Mostra apenas a descrição limpa (Sem código e sem "BANDA")
     const textoExibicao = item.descricao ? limparTextoParaPdf(item.descricao) : item.codigo;
     
     doc.text(textoExibicao, x + 3, y + 1.5, { width: colDescricao - 4, ellipsis: true });
@@ -404,6 +405,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
+        // Realiza o agrupamento usando estritamente o código bruto (ex: HDC1)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -428,14 +430,14 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Configuração de Espaço Dinâmico para 3 Colunas horizontais
+        // Configuração para 3 Colunas paralelas na folha
         const margemEsquerda = 20;
         const espacoEntreColunas = 15;
         const larguraUtil = doc.page.width - (margemEsquerda * 2); 
         const larguraColuna = (larguraUtil - (espacoEntreColunas * 2)) / 3;
 
         const yInicial = 46;
-        const yLimiteInferior = doc.page.height - 25; // Margem de segurança contra quebras
+        const yLimiteInferior = doc.page.height - 25; 
 
         let xAtual = margemEsquerda;
         let yAtual = yInicial;
@@ -447,7 +449,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             // Título (12) + Cabeçalho (11) + Linhas (N * 10) + Espaço entre blocos (4)
             const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
 
-            // Gerenciamento de colunas horizontais
+            // Gerenciamento dinâmico de colunas
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
@@ -458,7 +460,6 @@ exports.gerarPdfEstoque = async (req, res) => {
                     xAtual = margemEsquerda + (larguraColuna * 2) + (espacoEntreColunas * 2);
                     yAtual = yInicial;
                 } else {
-                    // Se estourar as 3 colunas da folha 1, abre a folha 2
                     doc.addPage();
                     desenharCabecalhoPaisagem(doc, dataHora);
                     colunaAtual = 1;
@@ -467,16 +468,16 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // 🎯 REMOVEU "BANDA: " DO TÍTULO DO GRUPO (Deixa apenas o nome do Desenho limpo)
+            // 🎯 MOSTRA O TÍTULO DO DESENHO AGRUPADO IGUAL AO MODELO ANTIGO, MAS LIMPO
             const desenhoLimpo = limparTextoParaPdf(grupo);
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
-                .text(`${desenhoLimpo}`, xAtual, yAtual + 1);
+                .text(`DESENHO: ${desenhoLimpo}`, xAtual, yAtual + 1);
             
             yAtual += 12;
 
-            // Desenha a tabela compacta resumida (Apenas Descrição e Qtd)
+            // Desenha o cabeçalho e as linhas da tabela daquele desenho específico
             yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
             itensDoGrupo.forEach((item, idx) => {
@@ -487,7 +488,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         });
 
         // ==================================================
-        // RODAPÉ PROTEGIDO CONTRA CRIAÇÃO DE PÁGINAS FANTASMAS
+        // RODAPÉ PROTEGIDO
         // ==================================================
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
