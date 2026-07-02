@@ -45,10 +45,10 @@ exports.importarXML = async (req, res) => {
             const cProd = produto.cProd.trim(); // Código do produto (Ex: "457261")
             const xProd = produto.xProd;        // Descrição
             
-            // 🔥 TRATAMENTO DA QUANTIDADE:
-            // Como o XML da Marangoni vem em KG (Ex: 5.95), se seu sistema controla por Unidade Física (peças), 
-            // arredondamos para o inteiro mais próximo. Se você usa estoque fracionado por KG, mude para: Number(produto.qCom)
-            const qCom = Math.round(Number(produto.qCom)) || 1; 
+            // 🎯 CORREÇÃO DA QUANTIDADE:
+            // Como a nota vem em KG (5.95), ignoramos o peso e consideramos que cada 
+            // lançamento de produto na nota representa exatamente 1 unidade de banda de rodagem.
+            const qCom = 1; 
 
             // Busca a banda no seu banco pelo código cadastrado
             const [[banda]] = await conn.execute(`
@@ -60,23 +60,22 @@ exports.importarXML = async (req, res) => {
                 continue; 
             }
 
-            // 🆙 Atualiza o estoque somando exclusivamente na tabela de bandas
+            // 🆙 Atualiza o estoque somando exclusivamente na tabela de bandas (adiciona 1)
             await conn.execute(`
                 UPDATE bandas 
                 SET estoque_total = estoque_total + ? 
                 WHERE id = ?
             `, [qCom, banda.id]);
 
-            // 📦 CORREÇÃO HISTÓRICA: Salva na tabela de compras (Se houver) para NÃO sujar a produção
-            // Caso você não possua a tabela 'compras_itens', pode comentar ou apagar o bloco abaixo.
+            // 📦 Registra na tabela de histórico de compras (se houver no seu banco)
             try {
                 await conn.execute(`
                     INSERT INTO compras_itens (banda_id, usuario_id, quantidade, nota_fiscal, observacao)
                     VALUES (?, ?, ?, ?, ?)
                 `, [banda.id, req.usuario.id, qCom, numNota, `Importação de XML automática`]);
             } catch (errDb) {
-                // Se a tabela compras_itens não existir, apenas ignora o histórico e segue para não travar o estoque
-                console.warn("Tabela de histórico de compras não configurada, pulando registro histórico.");
+                // Caso a tabela compras_itens não exista, o sistema ignora o histórico e segue para não travar
+                console.warn("Tabela de histórico de compras não localizada, pulando registro histórico.");
             }
 
             itensProcessados++;
@@ -86,7 +85,7 @@ exports.importarXML = async (req, res) => {
         if (itensProcessados === 0) {
             await conn.rollback();
             return res.status(400).json({ 
-                mensagem: `Nenhum produto da NF-e Nº ${numNota} possui código correspondente no seu cadastro de bandas (Confira se cadastrou o código correto).`,
+                mensagem: `Nenhum produto da NF-e Nº ${numNota} possui código correspondente no seu cadastro de bandas.`,
                 erros: errosItens 
             });
         }
@@ -94,7 +93,7 @@ exports.importarXML = async (req, res) => {
         await conn.commit();
 
         res.json({
-            mensagem: `NF-e Nº ${numNota} importada com sucesso! ${itensProcessados} produto(s) somado(s) ao estoque físico.`,
+            mensagem: `NF-e Nº ${numNota} importada com sucesso! ${itensProcessados} unidade(s) somada(s) ao estoque físico.`,
             avisos: errosItens.length > 0 ? errosItens : null
         });
 
