@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda atualizada com sucesso'
+            mensagem: 'Banda updated com sucesso'
         });
 
     } catch (error) {
@@ -310,6 +310,14 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
+// 🎯 FUNÇÃO AUXILIAR PARA LIMPAR TEXTO COMPACTO DO PDF
+function limparTextoParaPdf(textoBruto) {
+    if (!textoBruto) return '';
+    return String(textoBruto)
+        .replace(/BANDA\s?/gi, '')  // Remove a palavra BANDA (independente de maiúscula/minúscula)
+        .trim();
+}
+
 // ======================================================
 // CABEÇALHO COMPACTO (PAISAGEM)
 // ======================================================
@@ -328,7 +336,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
     doc.font('Helvetica-Bold')
         .fontSize(9)
         .fillColor('#333')
-        .text(`RELATÓRIO DE ESTOQUE DE BANDAS  |  ${dataHora}`, margem, 26, {
+        .text(`RELATÓRIO DE ESTOQUE RESUMIDO  |  ${dataHora}`, margem, 26, {
             width: largura - margem * 2,
             align: 'center'
         });
@@ -343,24 +351,21 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 // COMPONENTES DA TABELA ULTRA COMPACTA (3 COLUNAS)
 // ======================================================
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
-    const colCodigo = Math.floor(larguraColuna * 0.68);
-    const colEstoque = Math.floor(larguraColuna * 0.16);
-    const colAtivo = larguraColuna - colCodigo - colEstoque;
+    const colDescricao = Math.floor(larguraColuna * 0.74);
+    const colEstoque = larguraColuna - colDescricao;
 
     doc.rect(x, y, larguraColuna, 11).fill('#dfe8f3');
     doc.fillColor('#0b2c66').font('Helvetica-Bold').fontSize(7);
 
-    doc.text('Código / Descrição', x + 3, y + 2, { width: colCodigo - 4 });
-    doc.text('Est.', x + colCodigo + 1, y + 2, { width: colEstoque - 2, align: 'center' });
-    doc.text('Ativo', x + colCodigo + colEstoque + 1, y + 2, { width: colAtivo - 2, align: 'center' });
+    doc.text('Descrição', x + 3, y + 2, { width: colDescricao - 4 });
+    doc.text('Qtd.', x + colDescricao + 1, y + 2, { width: colEstoque - 2, align: 'center' });
 
     return y + 11;
 }
 
 function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false) {
-    const colCodigo = Math.floor(larguraColuna * 0.68);
-    const colEstoque = Math.floor(larguraColuna * 0.16);
-    const colAtivo = larguraColuna - colCodigo - colEstoque;
+    const colDescricao = Math.floor(larguraColuna * 0.74);
+    const colEstoque = larguraColuna - colDescricao;
 
     if (zebra) {
         doc.rect(x, y, larguraColuna, 10).fill('#f7f9fc');
@@ -373,16 +378,14 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    const texto = item.descricao ? `${item.codigo} - ${item.descricao}` : item.codigo;
-    doc.text(texto, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+    // 🎯 REMOVEU CÓDIGO E MANTEVE APENAS A DESCRIÇÃO LIMPA (Sem a palavra BANDA)
+    // Se não houver descrição preenchida, usa o código como plano B para não ficar em branco
+    const textoExibicao = item.descricao ? limparTextoParaPdf(item.descricao) : item.codigo;
+    
+    doc.text(textoExibicao, x + 3, y + 1.5, { width: colDescricao - 4, ellipsis: true });
 
-    doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
+    doc.text(String(item.estoque_total || 0), x + colDescricao + 1, y + 1.5, {
         width: colEstoque - 2,
-        align: 'center'
-    });
-
-    doc.text(item.ativo ? 'Sim' : 'Não', x + colCodigo + colEstoque + 1, y + 1.5, {
-        width: colAtivo - 2,
         align: 'center'
     });
 
@@ -432,7 +435,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         const larguraColuna = (larguraUtil - (espacoEntreColunas * 2)) / 3;
 
         const yInicial = 46;
-        const yLimiteInferior = doc.page.height - 25; // Margem de segurança rigorosa contra quebras automáticas
+        const yLimiteInferior = doc.page.height - 25; // Margem de segurança contra quebras
 
         let xAtual = margemEsquerda;
         let yAtual = yInicial;
@@ -444,7 +447,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             // Título (12) + Cabeçalho (11) + Linhas (N * 10) + Espaço entre blocos (4)
             const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
 
-            // Gerenciamento estrito de colunas e páginas manuais
+            // Gerenciamento de colunas horizontais
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
@@ -455,7 +458,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                     xAtual = margemEsquerda + (larguraColuna * 2) + (espacoEntreColunas * 2);
                     yAtual = yInicial;
                 } else {
-                    // Caso extremo de estouro da página 1, abre uma nova folha limpa
+                    // Se estourar as 3 colunas da folha 1, abre a folha 2
                     doc.addPage();
                     desenharCabecalhoPaisagem(doc, dataHora);
                     colunaAtual = 1;
@@ -464,15 +467,16 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Desenha o Título do Grupo de Banda
+            // 🎯 REMOVEU "BANDA: " DO TÍTULO DO GRUPO (Deixa apenas o nome do Desenho limpo)
+            const desenhoLimpo = limparTextoParaPdf(grupo);
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
-                .text(`BANDA: ${grupo}`, xAtual, yAtual + 1);
+                .text(`${desenhoLimpo}`, xAtual, yAtual + 1);
             
             yAtual += 12;
 
-            // Desenha a tabela compacta
+            // Desenha a tabela compacta resumida (Apenas Descrição e Qtd)
             yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
             itensDoGrupo.forEach((item, idx) => {
