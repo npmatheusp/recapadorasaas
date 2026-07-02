@@ -310,7 +310,7 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
-// 🎯 LIMPA APENAS AS PALAVRAS REPETITIVAS DO SISTEMA
+// Limpa de forma exata os sufixos "-BANDA" e "-ANEL"
 function limparSufixoInutil(textoBruto) {
     if (!textoBruto) return '';
     return String(textoBruto)
@@ -383,12 +383,10 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 AJUSTE FORMATO HDC1: Força o padrão "[Código Limpo] - [Descrição Limpa]"
+    // 🎯 AQUI ESTÁ A LÓGICA DO HDC1 APLICADA A TODOS:
+    // Ignoramos a variação do campo descrição e montamos o padrão replicado baseado no código puro.
     const codigoLimpo = limparSufixoInutil(item.codigo);
-    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : codigoLimpo;
-    
-    // Se a descrição já não for igual ao código, ele junta no formato "HDC1 225L - HDC1 225L"
-    const textoFormatado = codigoLimpo === descLimpa ? codigoLimpo : `${codigoLimpo} - ${descLimpa}`;
+    const textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
 
     doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
@@ -406,7 +404,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 }
 
 // ======================================================
-// PDF PRINCIPAL (1 FOLHA EM 3 COLUNAS)
+// PDF PRINCIPAL (1 FOLHA EM 3 COLUNAS HORIZONTAIS)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -417,6 +415,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
+        // Agrupamento estrito pelo prefixo inicial (desenho)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -475,7 +474,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // 🎯 MANTÉM O TÍTULO DE CADA DESENHO (Ex: BANDA: HDC1, BANDA: RTTR11, etc.)
+            // Cabeçalho do Bloco correspondente (Ex: BANDA: HDC1, BANDA: RTTR11, etc.)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -492,7 +491,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Rodapé protegido contra páginas fantasmas
+        // Rodapé de controle de páginas
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
