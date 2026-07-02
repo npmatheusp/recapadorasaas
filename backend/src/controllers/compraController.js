@@ -11,14 +11,10 @@ exports.importarXML = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // Converte o buffer do XML para string texturizada
         const xmlString = req.file.buffer.toString('utf-8');
-        
-        // Converte XML em Objeto limpo
         const parser = new xml2js.Parser({ explicitArray: false });
         const resultado = await parser.parseStringPromise(xmlString);
 
-        // Mapeamento exato baseado na estrutura real do seu nfeProc
         let infNFe;
         if (resultado.nfeProc && resultado.nfeProc.NFe && resultado.nfeProc.NFe.infNFe) {
             infNFe = resultado.nfeProc.NFe.infNFe;
@@ -31,26 +27,35 @@ exports.importarXML = async (req, res) => {
             return res.status(400).json({ mensagem: 'Estrutura de XML de NF-e inválida ou incompatível.' });
         }
 
-        const numNota = infNFe.ide.nNF; // Número da Nota
-        const itensNota = infNFe.det;   // Itens da nota (<det>)
-
-        // Força virar Array mesmo se a nota vier com apenas 1 item
+        const numNota = infNFe.ide.nNF;
+        const itensNota = infNFe.det;
         const listaItens = Array.isArray(itensNota) ? itensNota : [itensNota];
+        
+        // 🎯 CAPTURA O PESO UNITÁRIO DIRETO DO XML (Bloco de Transporte/Volumes)
+        // Lemos o peso líquido total e dividimos pela quantidade de volumes informada na nota
+        let pesoUnitarioXml = 1;
+        if (infNFe.transp && infNFe.transp.vol) {
+            const vol = infNFe.transp.vol;
+            const pesoLiquido = Number(vol.pesoL) || 0;
+            const qtdVolumes = Number(vol.qVol) || 1;
+            
+            if (pesoLiquido > 0) {
+                pesoUnitarioXml = pesoLiquido / qtdVolumes; // Ex: 5.950 / 1 = 5.95
+            }
+        }
         
         let itensProcessados = 0;
         let errosItens = [];
 
         for (const item of listaItens) {
             const produto = item.prod;
-            const cProd = produto.cProd.trim(); // Código do produto (Ex: "457261")
-            const xProd = produto.xProd;        // Descrição
+            const cProd = produto.cProd.trim(); 
+            const xProd = produto.xProd;        
             
-            // 🎯 CORREÇÃO DA QUANTIDADE:
-            // Como a nota vem em KG (5.95), ignoramos o peso e consideramos que cada 
-            // lançamento de produto na nota representa exatamente 1 unidade de banda de rodagem.
-            const qCom = 1; 
+            // Peso total lançado para este item (Ex: 5.95 ou 59.50)
+            const pesoTotalItem = Number(produto.qCom); 
 
-            // Busca a banda no seu banco pelo código cadastrado
+            // 🔍 Busca apenas a banda pelo código (sem precisar de coluna de peso)
             const [[banda]] = await conn.execute(`
                 SELECT id, estoque_total FROM bandas WHERE codigo = ?
             `, [cProd]);
@@ -60,28 +65,33 @@ exports.importarXML = async (req, res) => {
                 continue; 
             }
 
-            // 🆙 Atualiza o estoque somando exclusivamente na tabela de bandas (adiciona 1)
+            // 🎯 MATEMÁTICA INTELIGENTE VIA XML:
+            // Divide o peso total do item pelo peso unitário extraído da própria nota
+            let qCom = Math.round(pesoTotalItem / pesoUnitarioXml);
+
+            // Segurança para nunca zerar por arredondamento
+            if (qCom <= 0) qCom = 1;
+
+            // 🆙 Incrementa o estoque com a quantidade real calculada
             await conn.execute(`
                 UPDATE bandas 
                 SET estoque_total = estoque_total + ? 
                 WHERE id = ?
             `, [qCom, banda.id]);
 
-            // 📦 Registra na tabela de histórico de compras (se houver no seu banco)
+            // 📦 Registra na tabela de histórico de compras
             try {
                 await conn.execute(`
                     INSERT INTO compras_itens (banda_id, usuario_id, quantidade, nota_fiscal, observacao)
                     VALUES (?, ?, ?, ?, ?)
-                `, [banda.id, req.usuario.id, qCom, numNota, `Importação de XML automática`]);
+                `, [banda.id, req.usuario.id, qCom, numNota, `Importação automática (Peso Unitário NF: ${pesoUnitarioXml.toFixed(3)}kg)`]);
             } catch (errDb) {
-                // Caso a tabela compras_itens não exista, o sistema ignora o histórico e segue para não travar
                 console.warn("Tabela de histórico de compras não localizada, pulando registro histórico.");
             }
 
             itensProcessados++;
         }
 
-        // Se nenhum item bateu com o estoque do seu banco, cancela a transação inteira
         if (itensProcessados === 0) {
             await conn.rollback();
             return res.status(400).json({ 
@@ -93,7 +103,7 @@ exports.importarXML = async (req, res) => {
         await conn.commit();
 
         res.json({
-            mensagem: `NF-e Nº ${numNota} importada com sucesso! ${itensProcessados} unidade(s) somada(s) ao estoque físico.`,
+            mensagem: `NF-e Nº ${numNota} importada com sucesso! Quantidade calculada dinamicamente pelo peso do XML.`,
             avisos: errosItens.length > 0 ? errosItens : null
         });
 
