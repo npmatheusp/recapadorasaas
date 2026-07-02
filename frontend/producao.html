@@ -24,23 +24,33 @@
             h2{ font-size:22px; }
             .btn{ font-size:14px; }
             #resultadoBandas{ max-height:250px; }
+            .navbar .container-fluid { flex-direction: column; gap: 10px; }
+            .navbar .btn, .navbar a { width: 100%; }
         }
     </style>
 </head>
 <body>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Produção</h2>
-        <div>
-            <a href="dashboard.html" class="btn btn-warning me-2">Dashboard</a>
+<nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container-fluid px-4">
+        <span class="navbar-brand mb-0 h1">Sistema de Recapadora</span>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="dashboard.html" class="btn btn-warning">Dashboard</a>
+            <a href="bandas.html" class="btn btn-outline-light">Estoque</a>
+            <a href="compras.html" id="menuCompras" class="btn btn-outline-light">📦 Compras (XML)</a>
             <button onclick="sairSistema()" class="btn btn-danger">Sair</button>
         </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="mb-4">
+        <h2>Controle de Produção</h2>
     </div>
 
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Registrar Production</h5>
+            <h5 class="mb-0">Registrar Produção</h5>
         </div>
         <div class="card-body">
             <form id="formProducao">
@@ -77,11 +87,13 @@
                             <th>Descrição</th>
                             <th>Quantidade</th>
                             <th>Observação</th>
-                            <th class="text-center">Ações</th> </tr>
+                            <th class="text-center">Ações</th>
+                        </tr>
                     </thead>
                     <tbody id="tabelaHistorico">
                         <tr>
-                            <td colspan="6" class="text-center">Nenhum registro encontrado</td> </tr>
+                            <td colspan="6" class="text-center">Nenhum registro encontrado</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
