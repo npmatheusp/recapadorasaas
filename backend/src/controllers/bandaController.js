@@ -310,18 +310,18 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
-// 🎯 FUNÇÃO QUE REMOVE APENAS OS SUFIXOS "-BANDA" OU "- ANEL" PARA DEIXAR O TEXTO RESUMIDO
-function resumirTextoItem(textoBruto) {
+// 🎯 LIMPA APENAS AS PALAVRAS REPETITIVAS DO SISTEMA
+function limparSufixoInutil(textoBruto) {
     if (!textoBruto) return '';
     return String(textoBruto)
-        .replace(/-?\s*BANDA/gi, '') // Remove "-BANDA" ou "BANDA"
-        .replace(/-?\s*ANÉL/gi, '')  // Remove "-ANEL"
-        .replace(/-?\s*ANEL/gi, '')  // Remove "-ANEL"
+        .replace(/-?\s*BANDA/gi, '') 
+        .replace(/-?\s*ANÉL/gi, '')  
+        .replace(/-?\s*ANEL/gi, '')  
         .trim();
 }
 
 // ======================================================
-// CABEÇALHO COMPACTO (PAISAGEM) - IGUAL AO ORIGINAL
+// CABEÇALHO COMPACTO (PAISAGEM)
 // ======================================================
 function desenharCabecalhoPaisagem(doc, dataHora) {
     const largura = doc.page.width;
@@ -350,7 +350,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 }
 
 // ======================================================
-// COMPONENTES DA TABELA COMPACTA (VOLTOU AS 3 COLUNAS ORIGINAIS: Código, Est., Ativo)
+// COMPONENTES DA TABELA ORIGINAL (3 COLUNAS)
 // ======================================================
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
     const colCodigo = Math.floor(larguraColuna * 0.68);
@@ -383,11 +383,14 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 RECONSTRÓI O CODIGO/DESCRIÇÃO IGUAL AO ANTIGO, MAS APLICANDO O RESUMO DE TEXTO
-    const baseTexto = item.descricao ? `${item.codigo} - ${item.descricao}` : item.codigo;
-    const textoLimpo = resumirTextoItem(baseTexto);
+    // 🎯 AJUSTE FORMATO HDC1: Força o padrão "[Código Limpo] - [Descrição Limpa]"
+    const codigoLimpo = limparSufixoInutil(item.codigo);
+    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : codigoLimpo;
+    
+    // Se a descrição já não for igual ao código, ele junta no formato "HDC1 225L - HDC1 225L"
+    const textoFormatado = codigoLimpo === descLimpa ? codigoLimpo : `${codigoLimpo} - ${descLimpa}`;
 
-    doc.text(textoLimpo, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+    doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
     doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
         width: colEstoque - 2,
@@ -403,7 +406,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 }
 
 // ======================================================
-// PDF PRINCIPAL (FLUXO E AGRUPAMENTO IDÊNTICO AO ANTIGO)
+// PDF PRINCIPAL (1 FOLHA EM 3 COLUNAS)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -438,7 +441,6 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Configuração original de 3 colunas paralelas
         const margemEsquerda = 20;
         const espacoEntreColunas = 15;
         const larguraUtil = doc.page.width - (margemEsquerda * 2); 
@@ -453,11 +455,8 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
-            
-            // Título (12) + Cabeçalho (11) + Linhas (N * 10) + Espaço entre blocos (4)
             const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
 
-            // Gerenciamento e corte nativo de colunas que funcionava no seu relatório
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
@@ -476,7 +475,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // 🎯 MANTEVE O TÍTULO EXATAMENTE COMO NO SEU PDF ORIGINAL (Ex: "BANDA: HDC1")
+            // 🎯 MANTÉM O TÍTULO DE CADA DESENHO (Ex: BANDA: HDC1, BANDA: RTTR11, etc.)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -484,10 +483,8 @@ exports.gerarPdfEstoque = async (req, res) => {
             
             yAtual += 12;
 
-            // Desenha o cabeçalho azul original
             yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
-            // Preenche as linhas preservando os códigos originais ordenados
             itensDoGrupo.forEach((item, idx) => {
                 yAtual = desenharLinhaTabelaColuna(doc, xAtual, yAtual, larguraColuna, item, idx % 2 !== 0);
             });
@@ -495,7 +492,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Rodapé de controle de páginas
+        // Rodapé protegido contra páginas fantasmas
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
