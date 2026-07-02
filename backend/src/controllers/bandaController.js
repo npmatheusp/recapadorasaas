@@ -144,7 +144,7 @@ exports.editar = async (req, res) => {
         ]);
 
         return res.json({
-            mensagem: 'Banda updated com sucesso'
+            mensagem: 'Banda atualizada com sucesso'
         });
 
     } catch (error) {
@@ -310,16 +310,6 @@ function extrairGrupoBanda(codigo = '') {
     return partes[0] || 'SEM GRUPO';
 }
 
-// Limpa sufixos inúteis como "-BANDA" ou "-ANEL"
-function limparSufixoInutil(textoBruto) {
-    if (!textoBruto) return '';
-    return String(textoBruto)
-        .replace(/-?\s*BANDA/gi, '') 
-        .replace(/-?\s*ANÉL/gi, '')  
-        .replace(/-?\s*ANEL/gi, '')  
-        .trim();
-}
-
 // ======================================================
 // CABEÇALHO COMPACTO (PAISAGEM)
 // ======================================================
@@ -383,20 +373,12 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 LÓGICA DO HDC1 APLICADA CORRETAMENTE A TODOS OS ITEMS:
-    // Limpa o código e a descrição de sufixos. Se houver descrição diferente, concatena com " - ".
-    const codigoLimpo = limparSufixoInutil(item.codigo);
-    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : '';
+    // 🎯 LOGICA CORRETA IGUAL AO PDF EM ANEXO:
+    // Imprime exatamente a string do código (ex: "HDC1 225L-BANDA", "RTTR11 240S - ANEL")
+    // Sem concatenação com hífens ou duplicações.
+    const textoExibicao = String(item.codigo || '').trim();
 
-    let textoFormatado = codigoLimpo;
-    if (descLimpa && descLimpa !== codigoLimpo) {
-        textoFormatado = `${codigoLimpo} - ${descLimpa}`;
-    } else {
-        // Se não tiver descrição separada ou for igual, segue o padrão repetido do HDC1
-        textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
-    }
-
-    doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
+    doc.text(textoExibicao, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
     doc.text(String(item.estoque_total || 0), x + colCodigo + 1, y + 1.5, {
         width: colEstoque - 2,
@@ -423,7 +405,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo desenho inicial do código (ex: HDC1, RDMAX, RTAR11, etc.)
+        // Agrupamento estrito pelo primeiro nome (Desenho) (ex: HDC1, RTTR11, RDMAX...)
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -482,7 +464,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Título dinâmico para cada respectivo desenho (Ex: BANDA: HDC1, BANDA: RDMAX, etc.)
+            // Exibe o título do cabeçalho do bloco (ex: BANDA: HDC1, BANDA: RTTR11...)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -499,7 +481,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             yAtual += 4; 
         });
 
-        // Rodapé de paginação
+        // Rodapé de paginação dinâmico
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
