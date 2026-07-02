@@ -208,7 +208,7 @@ exports.alterarStatus = async (req, res) => {
         `, [novoStatus, id]);
 
         return res.json({
-            mensagem: 'Status updated com sucesso'
+            mensagem: 'Status atualizado com sucesso'
         });
 
     } catch (error) {
@@ -304,19 +304,20 @@ function formatarDataHoraBR() {
     }).format(new Date());
 }
 
-// 🎯 ESSA FUNÇÃO GARANTE O AGRUPAMENTO SEPARADO POR DESENHO (Ex: HDC1, UTDO31)
+// Extrai o primeiro termo do código (Ex: "HDC1 225L-BANDA" vira "HDC1")
 function extrairGrupoBanda(codigo = '') {
     const texto = String(codigo).trim();
     const partes = texto.split(/\s+/);
     return partes[0] || 'SEM GRUPO';
 }
 
-// 🎯 LIMPA A PALAVRA "BANDA" E TRAÇOS REMANESCENTES DO TEXTO
+// Remove os sufixos de texto repetitivos e limpa espaços
 function limparTextoParaPdf(textoBruto) {
     if (!textoBruto) return '';
     return String(textoBruto)
-        .replace(/BANDA\s?/gi, '') // Remove a palavra BANDA
-        .replace(/^\s*-\s*/, '')   // Remove hífen solto no início se houver
+        .replace(/-?\s*BANDA/gi, '') // Remove "-BANDA" ou "BANDA"
+        .replace(/-?\s*ANÉL/gi, '')  // Remove "-ANEL"
+        .replace(/-?\s*ANEL/gi, '')  // Remove "-ANEL"
         .trim();
 }
 
@@ -338,7 +339,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
     doc.font('Helvetica-Bold')
         .fontSize(9)
         .fillColor('#333')
-        .text(`RELATÓRIO DE ESTOQUE RESUMIDO POR DESENHO  |  ${dataHora}`, margem, 26, {
+        .text(`RELATÓRIO DE ESTOQUE RESUMIDO  |  ${dataHora}`, margem, 26, {
             width: largura - margem * 2,
             align: 'center'
         });
@@ -350,10 +351,10 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 }
 
 // ======================================================
-// COMPONENTES DA TABELA ULTRA COMPACTA (3 COLUNAS)
+// COMPONENTES DA TABELA COMPACTA (3 COLUNAS HORIZONTAIS)
 // ======================================================
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
-    const colDescricao = Math.floor(larguraColuna * 0.74);
+    const colDescricao = Math.floor(larguraColuna * 0.76);
     const colEstoque = larguraColuna - colDescricao;
 
     doc.rect(x, y, larguraColuna, 11).fill('#dfe8f3');
@@ -366,7 +367,7 @@ function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
 }
 
 function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false) {
-    const colDescricao = Math.floor(larguraColuna * 0.74);
+    const colDescricao = Math.floor(larguraColuna * 0.76);
     const colEstoque = larguraColuna - colDescricao;
 
     if (zebra) {
@@ -380,9 +381,18 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 MANTEVE O TRATAMENTO DE EXIBIÇÃO: Mostra apenas a descrição limpa (Sem código e sem "BANDA")
-    const textoExibicao = item.descricao ? limparTextoParaPdf(item.descricao) : item.codigo;
+    // 🎯 SEGREDO DA LIMPEZA: Pega o código bruto, remove a primeira palavra (o desenho), 
+    // remove as palavras -BANDA/-ANEL e deixa só a Medida/Descrição!
+    let textoBase = item.descricao ? item.descricao : item.codigo;
+    let partes = textoBase.split(/\s+/);
     
+    // Se a primeira palavra for igual ao grupo do desenho, remove ela para não repetir
+    if (partes.length > 1 && item.grupoPertencente === partes[0]) {
+        partes.shift();
+    }
+    
+    let textoExibicao = limparTextoParaPdf(partes.join(' '));
+
     doc.text(textoExibicao, x + 3, y + 1.5, { width: colDescricao - 4, ellipsis: true });
 
     doc.text(String(item.estoque_total || 0), x + colDescricao + 1, y + 1.5, {
@@ -394,7 +404,7 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 }
 
 // ======================================================
-// PDF PRINCIPAL (1 FOLHA EM 3 COLUNAS)
+// PDF PRINCIPAL (AGRUPAMENTO E 3 COLUNAS REAIS)
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
@@ -405,11 +415,14 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Realiza o agrupamento usando estritamente o código bruto (ex: HDC1)
+        // Agrupamento estrito por Desenho baseado na primeira palavra do código
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
             if (!grupos[g]) grupos[g] = [];
+            
+            // Salva qual o grupo dele para limpar dinamicamente depois
+            b.grupoPertencente = g;
             grupos[g].push(b);
         }
 
@@ -430,7 +443,6 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Configuração para 3 Colunas paralelas na folha
         const margemEsquerda = 20;
         const espacoEntreColunas = 15;
         const larguraUtil = doc.page.width - (margemEsquerda * 2); 
@@ -445,11 +457,8 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
-            
-            // Título (12) + Cabeçalho (11) + Linhas (N * 10) + Espaço entre blocos (4)
-            const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
+            const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 6;
 
-            // Gerenciamento dinâmico de colunas
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
                     colunaAtual = 2;
@@ -468,32 +477,27 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // 🎯 MOSTRA O TÍTULO DO DESENHO AGRUPADO IGUAL AO MODELO ANTIGO, MAS LIMPO
-            const desenhoLimpo = limparTextoParaPdf(grupo);
+            // 🎯 TITULO DO BLOCO IGUAL AO SEU PDF (Ex: "DESENHO: HDC1")
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
-                .text(`DESENHO: ${desenhoLimpo}`, xAtual, yAtual + 1);
+                .text(`DESENHO: ${grupo}`, xAtual, yAtual + 2);
             
             yAtual += 12;
 
-            // Desenha o cabeçalho e as linhas da tabela daquele desenho específico
             yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
 
             itensDoGrupo.forEach((item, idx) => {
                 yAtual = desenharLinhaTabelaColuna(doc, xAtual, yAtual, larguraColuna, item, idx % 2 !== 0);
             });
 
-            yAtual += 4; 
+            yAtual += 6; 
         });
 
-        // ==================================================
-        // RODAPÉ PROTEGIDO
-        // ==================================================
+        // Rodapé de controle de página
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(i);
-
             const margemInferiorOriginal = doc.page.margins.bottom;
             doc.page.margins.bottom = 0; 
 
@@ -509,7 +513,6 @@ exports.gerarPdfEstoque = async (req, res) => {
                         align: 'center'
                     }
                 );
-
             doc.page.margins.bottom = margemInferiorOriginal;
         }
 
