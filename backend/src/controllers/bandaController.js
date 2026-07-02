@@ -307,17 +307,11 @@ function formatarDataHoraBR() {
 function extrairGrupoBanda(codigo = '') {
     const texto = String(codigo).trim();
     const partes = texto.split(/\s+/);
+    // Extrai o primeiro termo se for um código composto por espaço, ou o termo após o hífen se houver (ex: "600082 - RDMAX" -> pega RDMAX)
+    if (partes[0] && !isNaN(partes[0]) && partes[1] === '-' && partes[2]) {
+        return partes[2];
+    }
     return partes[0] || 'SEM GRUPO';
-}
-
-// Limpa sufixos inúteis como "-BANDA" ou "-ANEL"
-function limparSufixoInutil(textoBruto) {
-    if (!textoBruto) return '';
-    return String(textoBruto)
-        .replace(/-?\s*BANDA/gi, '') 
-        .replace(/-?\s*ANÉL/gi, '')  
-        .replace(/-?\s*ANEL/gi, '')  
-        .trim();
 }
 
 // ======================================================
@@ -383,18 +377,8 @@ function desenharLinhaTabelaColuna(doc, x, y, larguraColuna, item, zebra = false
 
     doc.fillColor('#222').font('Helvetica').fontSize(7);
 
-    // 🎯 LÓGICA DO HDC1 APLICADA CORRETAMENTE A TODOS OS ITEMS:
-    // Limpa o código e a descrição de sufixos. Se houver descrição diferente, concatena com " - ".
-    const codigoLimpo = limparSufixoInutil(item.codigo);
-    const descLimpa = item.descricao ? limparSufixoInutil(item.descricao) : '';
-
-    let textoFormatado = codigoLimpo;
-    if (descLimpa && descLimpa !== codigoLimpo) {
-        textoFormatado = `${codigoLimpo} - ${descLimpa}`;
-    } else {
-        // Se não tiver descrição separada ou for igual, segue o padrão repetido do HDC1
-        textoFormatado = `${codigoLimpo} - ${codigoLimpo}`;
-    }
+    // Renderiza exatamente a string crua cadastrada no banco de dados
+    const textoFormatado = String(item.codigo || '').trim();
 
     doc.text(textoFormatado, x + 3, y + 1.5, { width: colCodigo - 4, ellipsis: true });
 
@@ -423,7 +407,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY codigo
         `);
 
-        // Agrupamento estrito pelo desenho inicial do código (ex: HDC1, RDMAX, RTAR11, etc.)
+        // Agrupamento estrito pelo desenho/modelo
         const grupos = {};
         for (const b of bandas) {
             const g = extrairGrupoBanda(b.codigo);
@@ -462,7 +446,9 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         ordenados.forEach((grupo) => {
             const itensDoGrupo = grupos[grupo];
-            const alturaBloco = 12 + 11 + (itensDoGrupo.length * 10) + 4;
+            
+            // Cada item consome individualmente: 11px de Cabeçalho + 10px de Linha de dados
+            const alturaBloco = 12 + (itensDoGrupo.length * (11 + 10)) + 4;
 
             if (yAtual + alturaBloco > yLimiteInferior) {
                 if (colunaAtual === 1) {
@@ -482,7 +468,7 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Título dinâmico para cada respectivo desenho (Ex: BANDA: HDC1, BANDA: RDMAX, etc.)
+            // Escreve o título do Grupo de Modelo (ex: BANDA: RDMAX)
             doc.font('Helvetica-Bold')
                 .fontSize(8)
                 .fillColor('#0b2c66')
@@ -490,9 +476,9 @@ exports.gerarPdfEstoque = async (req, res) => {
             
             yAtual += 12;
 
-            yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
-
+            // Loop ajustado para colocar o cabeçalho acima de cada item individualmente
             itensDoGrupo.forEach((item, idx) => {
+                yAtual = desenharCabecalhoTabelaColuna(doc, xAtual, yAtual, larguraColuna);
                 yAtual = desenharLinhaTabelaColuna(doc, xAtual, yAtual, larguraColuna, item, idx % 2 !== 0);
             });
 
