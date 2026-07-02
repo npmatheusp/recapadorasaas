@@ -2,12 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+// =========================
+// ROTAS IMPORTADAS
+// =========================
 const authRoutes = require('./routes/authRoutes');
 const testeRoutes = require('./routes/testeRoutes');
 const bandaRoutes = require('./routes/bandaRoutes');
 const movimentacaoRoutes = require('./routes/movimentacaoRoutes');
 const producaoRoutes = require('./routes/producaoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const compraRoutes = require('./routes/compraRoutes'); // 🔥 NOVA ROTA DE XML DE COMPRAS
 
 const app = express();
 
@@ -26,6 +30,7 @@ app.use('/api/bandas', bandaRoutes);
 app.use('/api/movimentacoes', movimentacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/producao', producaoRoutes);
+app.use('/api/compras', compraRoutes); // 🔥 ENDPOINT PARA IMPORTAÇÃO DE XML
 
 // =========================
 // STATUS DA API

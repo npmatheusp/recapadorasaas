@@ -87,7 +87,7 @@ function renderizarTabela(bandas) {
 
         tabela.innerHTML += `
             <tr>
-                <td><strong>${banda.codigo}</strong></td>
+                <td><strong>${banda.codigo || "---"}</strong></td>
                 <td>${banda.descricao || ""}</td>
                 <td>
                     <span class="badge ${corEstoque}">
@@ -166,12 +166,22 @@ async function salvarBanda() {
         return;
     }
 
-    try {
-        const codigo = document.getElementById("codigo").value.trim();
-        const descricao = document.getElementById("descricao").value.trim();
-        const estoque_total = Number(document.getElementById("estoque_total").value || 0);
-        const estoque_minimo = Number(document.getElementById("estoque_minimo").value || 0);
+    const codigoInput = document.getElementById("codigo");
+    const descricaoInput = document.getElementById("descricao");
+    const estoqueTotalInput = document.getElementById("estoque_total");
+    const estoqueMinimoInput = document.getElementById("estoque_minimo");
 
+    const codigo = codigoInput.value.trim();
+    const descricao = descricaoInput.value.trim();
+    const estoque_total = Number(estoqueTotalInput.value || 0);
+    const estoque_minimo = Number(estoqueMinimoInput.value || 0);
+
+    if (!codigo || !descricao) {
+        alert("Por favor, preencha o código do fornecedor e a descrição da banda.");
+        return;
+    }
+
+    try {
         const resposta = await fetch(`${API}/bandas`, {
             method: "POST",
             headers: {
@@ -203,10 +213,12 @@ async function salvarBanda() {
         }
 
         alert(dados.mensagem || "Banda salva com sucesso");
-        document.getElementById("codigo").value = "";
-        document.getElementById("descricao").value = "";
-        document.getElementById("estoque_total").value = "";
-        document.getElementById("estoque_minimo").value = "";
+        
+        // Limpeza profissional dos campos do formulário
+        codigoInput.value = "";
+        descricaoInput.value = "";
+        estoqueTotalInput.value = "";
+        estoqueMinimoInput.value = "";
 
         carregarBandas();
 
