@@ -322,8 +322,8 @@ function limparSufixoInutil(texto) {
 const CORES = {
     azul: '#0B4F8C',
     texto: '#222222',
-    zebra: '#F7F9FB', // Fundo bem suave para o zebrado
-    linha: '#EAEAEA'   // Linha divisória bem discreta
+    zebra: '#F7F9FB', 
+    linha: '#EAEAEA'   
 };
 
 // ======================================================
@@ -418,7 +418,7 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
 }
 
 // ======================================================
-// CALCULA ALTURA DO BLOCO (AJUSTADO)
+// CALCULA ALTURA DO BLOCO
 // ======================================================
 function calcularAlturaBloco(itens) {
     return 14 + (itens.length * 14) + 15; 
@@ -462,16 +462,21 @@ exports.gerarPdfEstoque = async (req, res) => {
             'inline; filename=Relatorio_Estoque_Bandas.pdf'
         );
 
+        // CORREÇÃO: autoFirstPage: false impede a criação automática de uma página em branco indesejada
         const doc = new PDFDocument({
             size: 'A4',
             layout: 'landscape',
             margin: 20,
-            bufferPages: true
+            bufferPages: true,
+            autoFirstPage: false 
         });
 
         doc.pipe(res);
 
         const dataHora = formatarDataHoraBR();
+
+        // Inicializa explicitamente a primeira página correta do conteúdo
+        doc.addPage();
         desenharCabecalhoPaisagem(doc, dataHora);
 
         // Grid Layout de 3 Colunas
@@ -481,7 +486,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         const larguraColuna = (larguraUtil - (espacoFator * 2)) / 3;
 
         const yInicial = 60;
-        const limitePagina = doc.page.height - 30; // Margem de segurança inferior aumentada para evitar páginas vazias
+        const limitePagina = doc.page.height - 30; // Margem de segurança
 
         let coluna = 1;
         let x = margem;
@@ -492,7 +497,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             const itens = grupos[grupo];
             const alturaBloco = calcularAlturaBloco(itens);
 
-            // Validação rigorosa de quebra de colunas e páginas dinâmicas
+            // Validação de quebra de colunas e páginas dinâmicas
             if (y + alturaBloco > limitePagina) {
                 if (coluna === 1) {
                     coluna = 2;
@@ -521,7 +526,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             y += 15; 
         }
 
-        // Paginação Dinâmica Inferior Sem Duplicar Páginas
+        // Paginação Dinâmica precisa e sem duplicidade
         const paginas = doc.bufferedPageRange();
         for (let i = 0; i < paginas.count; i++) {
             doc.switchToPage(i);
