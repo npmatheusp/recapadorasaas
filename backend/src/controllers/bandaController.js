@@ -475,7 +475,7 @@ exports.gerarPdfEstoque = async (req, res) => {
         const larguraColuna = (larguraUtil - (espacoFator * 2)) / 3;
 
         const yInicial = 60;
-        const limitePagina = doc.page.height - 35; // Margem de segurança recalculada
+        const limitePagina = doc.page.height - 35; 
 
         let coluna = 1;
         let x = margem;
@@ -487,7 +487,6 @@ exports.gerarPdfEstoque = async (req, res) => {
             const itens = grupos[grupo];
             const alturaBloco = calcularAlturaBloco(itens);
 
-            // Validação estrita de quebra antes de imprimir o bloco
             if (y + alturaBloco > limitePagina) {
                 if (coluna === 1) {
                     coluna = 2;
@@ -509,10 +508,8 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Desenha o bloco
             y = desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna);
             
-            // CORREÇÃO: Só adiciona espaçamento extra se houver mais um grupo vindo na sequência
             if (idx < listaGrupos.length - 1) {
                 y += 15; 
             }
@@ -523,13 +520,17 @@ exports.gerarPdfEstoque = async (req, res) => {
         for (let i = 0; i < paginas.count; i++) {
             doc.switchToPage(i);
 
+            // MODIFICAÇÃO CHAVE: Força a margem inferior para 0 temporariamente nesta página.
+            // Isso impede que o doc.text() ative a quebra de página automática do PDFKit no rodapé!
+            doc.page.margins.bottom = 0;
+
             doc.font('Helvetica')
                 .fontSize(8)
                 .fillColor('#777777')
                 .text(
                     `Página ${i + 1} de ${paginas.count}`,
                     20,
-                    doc.page.height - 18,
+                    doc.page.height - 15, // Posição segura dentro da área útil liberada
                     {
                         width: doc.page.width - 40,
                         align: 'center'
