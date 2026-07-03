@@ -54,7 +54,7 @@ exports.registrar = async (req, res) => {
         `, [banda_id, usuario_id, qtd, observacao || null]);
 
         await conn.commit();
-        res.json({ mensagem: 'Produção registrada com sucesso' });
+        res.json({ message: 'Produção registrada com sucesso' });
     } catch (error) {
         await conn.rollback();
         console.error(error);
@@ -89,7 +89,7 @@ exports.historico = async (req, res) => {
 };
 
 // ======================================================
-// CANCELAR LANÇAMENTO (COM TRAVA DE 1 HORA PARA PRODUÇÃO)
+// CANCELAR LANÇAMENTO (CORRIGIDO PARA O SEU BANCO DE DADOS)
 // ======================================================
 exports.cancelar = async (req, res) => {
     const conn = await pool.getConnection();
@@ -98,8 +98,10 @@ exports.cancelar = async (req, res) => {
 
         const { id } = req.params;
 
-        // Injeta o perfil mapeado pelo seu middleware de segurança
-        const usuarioPerfil = req.usuario && req.usuario.perfil; 
+        // Pega o perfil ("Administrador") e transforma em minúsculo ("administrador") para comparar com segurança
+        const usuarioPerfil = req.usuario && req.usuario.perfil 
+            ? String(req.usuario.perfil).trim().toLowerCase() 
+            : ''; 
 
         // 1. Busca a produção trazendo também a data de criação (criado_em)
         const [[producao]] = await conn.execute(`
@@ -111,8 +113,9 @@ exports.cancelar = async (req, res) => {
             return res.status(404).json({ mensagem: 'Registro de produção não encontrado' });
         }
 
-        // 2. Aplica a Regra de Tempo (Bloqueia se não for admin)
-        if (usuarioPerfil !== 'admin') {
+        // 2. Aplica a Regra de Tempo
+        // Como aplicamos o .toLowerCase() ali em cima, a palavra "Administrador" vira "administrador" e entra perfeitamente aqui, ignorando o bloqueio de 1 hora!
+        if (usuarioPerfil !== 'administrador' && usuarioPerfil !== 'admin') {
             const dataCriacao = new Date(producao.criado_em);
             const agora = new Date();
             
