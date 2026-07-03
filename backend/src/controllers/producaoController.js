@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+// ======================================================
+// BANDAS DISPONÍVEIS
+// ======================================================
 exports.bandasDisponiveis = async (req, res) => {
     try {
         const [rows] = await pool.execute(`
@@ -15,6 +18,9 @@ exports.bandasDisponiveis = async (req, res) => {
     }
 };
 
+// ======================================================
+// REGISTRAR PRODUÇÃO
+// ======================================================
 exports.registrar = async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -58,6 +64,9 @@ exports.registrar = async (req, res) => {
     }
 };
 
+// ======================================================
+// HISTÓRICO DE PRODUÇÃO
+// ======================================================
 exports.historico = async (req, res) => {
     try {
         const [rows] = await pool.execute(`
@@ -79,7 +88,9 @@ exports.historico = async (req, res) => {
     }
 };
 
-// 🔥 NOVA FUNÇÃO: CANCELAR E DEVOLVER ESTOQUE
+// ======================================================
+// CANCELAR LANÇAMENTO (COM TRAVA DE 1 HORA PARA PRODUÇÃO)
+// ======================================================
 exports.cancelar = async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -87,9 +98,12 @@ exports.cancelar = async (req, res) => {
 
         const { id } = req.params;
 
-        // 1. Busca a produção existente para saber a quantidade e qual era a banda
+        // Injeta o perfil mapeado pelo seu middleware de segurança
+        const usuarioPerfil = req.usuario && req.usuario.perfil; 
+
+        // 1. Busca a produção trazendo também a data de criação (criado_em)
         const [[producao]] = await conn.execute(`
-            SELECT banda_id, quantidade FROM producao WHERE id = ?
+            SELECT banda_id, quantidade, criado_em FROM producao WHERE id = ?
         `, [id]);
 
         if (!producao) {
@@ -97,14 +111,32 @@ exports.cancelar = async (req, res) => {
             return res.status(404).json({ mensagem: 'Registro de produção não encontrado' });
         }
 
-        // 2. Devolve a quantidade gasta de volta ao estoque da banda
+        // 2. Aplica a Regra de Tempo (Bloqueia se não for admin)
+        if (usuarioPerfil !== 'admin') {
+            const dataCriacao = new Date(producao.criado_em);
+            const agora = new Date();
+            
+            // Calcula a diferença em milissegundos
+            const diferencaMilissegundos = agora - dataCriacao;
+            // Converte 1 hora para milissegundos (1 * 60 * 60 * 1000)
+            const umaHoraEmMs = 3600000;
+
+            if (diferencaMilissegundos > umaHoraEmMs) {
+                await conn.rollback();
+                return res.status(403).json({ 
+                    mensagem: 'O prazo limite de 1 hora para cancelamento por operadores expirou. Solicite a um administrador.' 
+                });
+            }
+        }
+
+        // 3. Devolve a quantidade gasta de volta ao estoque da banda
         await conn.execute(`
             UPDATE bandas 
             SET estoque_total = estoque_total + ? 
             WHERE id = ?
         `, [producao.quantidade, producao.banda_id]);
 
-        // 3. Deleta o registro da produção
+        // 4. Deleta o registro da produção
         await conn.execute(`
             DELETE FROM producao WHERE id = ?
         `, [id]);
