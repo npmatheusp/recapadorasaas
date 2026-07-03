@@ -208,7 +208,7 @@ exports.alterarStatus = async (req, res) => {
         `, [novoStatus, id]);
 
         return res.json({
-            mensagem: 'Status atualizado com sucesso'
+            mensagem: 'Status updated com sucesso'
         });
 
     } catch (error) {
@@ -367,7 +367,6 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 // DESENHAR BLOCO COM EFEITO ZEBRADO E LINHAS
 // ======================================================
 function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
-    // Título do Grupo (Ex: RTAW)
     doc.fillColor(CORES.azul)
         .font('Helvetica-Bold')
         .fontSize(10)
@@ -375,13 +374,11 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
     
     y += 14; 
 
-    // Renderizar itens do grupo com efeito zebrado e linhas horizontais
     itens.forEach((item, indice) => {
         const descricaoLimpa = limparSufixoInutil(item.descricao || item.codigo);
         const estoque = Number(item.estoque_total || 0).toString();
         const alturaLinha = 14;
 
-        // Efeito Zebrado: Aplica fundo cinza claro nas linhas ímpares
         if (indice % 2 !== 0) {
             doc.rect(x - 2, y, larguraColuna + 4, alturaLinha)
                 .fill(CORES.zebra);
@@ -391,20 +388,17 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
             .font('Helvetica')
             .fontSize(9);
 
-        // Texto do item (Descrição)
         doc.text(descricaoLimpa, x + 2, y + 2.5, {
             width: larguraColuna * 0.75 - 2,
             ellipsis: true
         });
 
-        // Quantidade alinhada à direita
         doc.font('Helvetica-Bold')
             .text(estoque, x + (larguraColuna * 0.75), y + 2.5, {
                 width: larguraColuna * 0.25 - 2,
                 align: 'right'
             });
 
-        // Desenha a linha horizontal inferior separadora
         doc.moveTo(x - 2, y + alturaLinha)
             .lineTo(x + larguraColuna + 2, y + alturaLinha)
             .lineWidth(0.4)
@@ -421,7 +415,7 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
 // CALCULA ALTURA DO BLOCO
 // ======================================================
 function calcularAlturaBloco(itens) {
-    return 14 + (itens.length * 14) + 15; 
+    return 14 + (itens.length * 14); 
 }
 
 // ======================================================
@@ -441,7 +435,6 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY descricao ASC, codigo ASC
         `);
 
-        // Agrupar itens por desenho
         const grupos = {};
         bandas.forEach(item => {
             const textoParaGrupo = item.descricao ? item.descricao : item.codigo;
@@ -455,14 +448,12 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         const listaGrupos = Object.keys(grupos).sort();
 
-        // Configuração de Resposta
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader(
             'Content-Disposition',
             'inline; filename=Relatorio_Estoque_Bandas.pdf'
         );
 
-        // CORREÇÃO: autoFirstPage: false impede a criação automática de uma página em branco indesejada
         const doc = new PDFDocument({
             size: 'A4',
             layout: 'landscape',
@@ -475,29 +466,28 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         const dataHora = formatarDataHoraBR();
 
-        // Inicializa explicitamente a primeira página correta do conteúdo
         doc.addPage();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Grid Layout de 3 Colunas
         const margem = 20;
         const espacoFator = 20; 
         const larguraUtil = doc.page.width - (margem * 2);
         const larguraColuna = (larguraUtil - (espacoFator * 2)) / 3;
 
         const yInicial = 60;
-        const limitePagina = doc.page.height - 30; // Margem de segurança
+        const limitePagina = doc.page.height - 35; // Margem de segurança recalculada
 
         let coluna = 1;
         let x = margem;
         let y = yInicial;
 
         // Loop pelos grupos mapeados
-        for (const grupo of listaGrupos) {
+        for (let idx = 0; idx < listaGrupos.length; idx++) {
+            const grupo = listaGrupos[idx];
             const itens = grupos[grupo];
             const alturaBloco = calcularAlturaBloco(itens);
 
-            // Validação de quebra de colunas e páginas dinâmicas
+            // Validação estrita de quebra antes de imprimir o bloco
             if (y + alturaBloco > limitePagina) {
                 if (coluna === 1) {
                     coluna = 2;
@@ -519,14 +509,16 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Desenha o bloco com efeito zebrado e linhas
+            // Desenha o bloco
             y = desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna);
             
-            // Espaçamento entre blocos na mesma coluna
-            y += 15; 
+            // CORREÇÃO: Só adiciona espaçamento extra se houver mais um grupo vindo na sequência
+            if (idx < listaGrupos.length - 1) {
+                y += 15; 
+            }
         }
 
-        // Paginação Dinâmica precisa e sem duplicidade
+        // Paginação Dinâmica precisa
         const paginas = doc.bufferedPageRange();
         for (let i = 0; i < paginas.count; i++) {
             doc.switchToPage(i);
