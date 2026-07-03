@@ -309,16 +309,6 @@ function extrairGrupoBanda(codigo = '') {
     return String(codigo).trim().split(/\s+/)[0] || 'SEM GRUPO';
 }
 
-function limparSufixoInutil(texto) {
-    if (!texto) return '';
-
-    return String(texto)
-        .replace(/-?\s*BANDA/gi, '')
-        .replace(/-?\s*ANEL/gi, '')
-        .replace(/-?\s*ANÉL/gi, '')
-        .trim();
-}
-
 const CORES = {
     azul: '#0B4F8C',
     azulClaro: '#EAF3FB',
@@ -334,17 +324,14 @@ const CORES = {
 // ======================================================
 
 function desenharCabecalhoPaisagem(doc, dataHora) {
-
     const margem = 20;
     const largura = doc.page.width;
 
     // Barra superior
-
     doc.rect(0, 0, largura, 10)
         .fill(CORES.azul);
 
     // Empresa
-
     doc.fillColor(CORES.azul)
         .font('Helvetica-Bold')
         .fontSize(15)
@@ -359,7 +346,6 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
         );
 
     // Subtítulo
-
     doc.fillColor('#444')
         .font('Helvetica')
         .fontSize(9)
@@ -374,7 +360,6 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
         );
 
     // Linha azul
-
     doc.moveTo(margem, 58)
         .lineTo(largura - margem, 58)
         .lineWidth(1.2)
@@ -387,7 +372,6 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 // ======================================================
 
 function desenharTituloGrupo(doc, grupo, x, y, largura) {
-
     doc.rect(x, y, largura, 14)
         .fill(CORES.azul);
 
@@ -411,7 +395,6 @@ function desenharTituloGrupo(doc, grupo, x, y, largura) {
 // ======================================================
 
 function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
-
     const colCodigo = larguraColuna * 0.70;
     const colEstoque = larguraColuna * 0.15;
     const colAtivo = larguraColuna * 0.15;
@@ -458,6 +441,7 @@ function desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna) {
 
     return y + 13;
 }
+
 // ======================================================
 // LINHAS DA TABELA
 // ======================================================
@@ -466,30 +450,29 @@ function desenharLinhaTabelaColuna(
     doc,
     x,
     y,
-    larguraColuna,
+    gridWidth,
     item,
     zebra = false
 ) {
-
-    const colCodigo = larguraColuna * 0.70;
-    const colEstoque = larguraColuna * 0.15;
-    const colAtivo = larguraColuna * 0.15;
+    const colCodigo = gridWidth * 0.70;
+    const colEstoque = gridWidth * 0.15;
+    const colAtivo = gridWidth * 0.15;
 
     const alturaLinha = 12;
 
     // Fundo zebra
     if (zebra) {
-        doc.rect(x, y, larguraColuna, alturaLinha)
+        doc.rect(x, y, gridWidth, alturaLinha)
             .fill(CORES.zebra);
     }
 
     // Borda externa
-    doc.rect(x, y, larguraColuna, alturaLinha)
+    doc.rect(x, y, gridWidth, alturaLinha)
         .strokeColor(CORES.linha)
         .lineWidth(0.35)
         .stroke();
 
-    // Linhas verticais
+    // Linhas verticais internas
     doc.moveTo(x + colCodigo, y)
         .lineTo(x + colCodigo, y + alturaLinha)
         .strokeColor(CORES.linha)
@@ -501,27 +484,17 @@ function desenharLinhaTabelaColuna(
         .stroke();
 
     //---------------------------------------------------
-    // Texto
+    // Texto Puro do Código/Descrição
     //---------------------------------------------------
-
-    const codigo = limparSufixoInutil(item.codigo);
-
-    const descricao = item.descricao
-        ? limparSufixoInutil(item.descricao)
-        : '';
-
-    let texto = codigo;
-
-    if (descricao && descricao !== codigo) {
-        texto += ' - ' + descricao;
-    }
+    // Alterado para manter os sufixos "- BANDA" e "- ANEL" exatamente como no PDF de exemplo.
+    const textoExibicao = String(item.codigo || '').trim();
 
     doc.fillColor(CORES.texto)
         .font('Helvetica')
         .fontSize(7);
 
     doc.text(
-        texto,
+        textoExibicao,
         x + 3,
         y + 2.5,
         {
@@ -533,21 +506,14 @@ function desenharLinhaTabelaColuna(
     //---------------------------------------------------
     // Estoque
     //---------------------------------------------------
-
     const estoque = Number(item.estoque_total || 0);
 
     if (estoque <= 0) {
-
         doc.fillColor('#C62828');
-
     } else if (estoque < 5) {
-
         doc.fillColor('#E67E22');
-
     } else {
-
         doc.fillColor('#1E8449');
-
     }
 
     doc.font('Helvetica-Bold')
@@ -565,13 +531,12 @@ function desenharLinhaTabelaColuna(
     //---------------------------------------------------
     // Ativo
     //---------------------------------------------------
-
     doc.fillColor(item.ativo ? '#1E8449' : '#C62828')
         .font('Helvetica-Bold')
         .fontSize(7);
 
     doc.text(
-        item.ativo ? 'SIM' : 'NÃO',
+        item.ativo ? 'Sim' : 'Não',
         x + colCodigo + colEstoque,
         y + 2.5,
         {
@@ -581,23 +546,19 @@ function desenharLinhaTabelaColuna(
     );
 
     return y + alturaLinha;
-
 }
-
 
 // ======================================================
 // CALCULA ALTURA DO BLOCO
 // ======================================================
 
 function calcularAlturaBloco(itens){
-
     return (
         14 +      // titulo azul
         13 +      // cabeçalho tabela
         (itens.length * 12) +
         8
     );
-
 }
 
 // ======================================================
@@ -605,9 +566,7 @@ function calcularAlturaBloco(itens){
 // ======================================================
 
 exports.gerarPdfEstoque = async (req, res) => {
-
     try {
-
         const [bandas] = await pool.execute(`
             SELECT
                 id,
@@ -621,29 +580,24 @@ exports.gerarPdfEstoque = async (req, res) => {
         `);
 
         //--------------------------------------------------
-        // AGRUPAR POR DESENHO
+        // AGRUPAR POR DESENHO (Ex: HDC1, RTTR11)
         //--------------------------------------------------
-
         const grupos = {};
 
         bandas.forEach(item => {
-
             const grupo = extrairGrupoBanda(item.codigo);
 
             if (!grupos[grupo]) {
                 grupos[grupo] = [];
             }
-
             grupos[grupo].push(item);
-
         });
 
         const listaGrupos = Object.keys(grupos).sort();
 
         //--------------------------------------------------
-        // PDF
+        // CONFIGURAÇÃO DO PDFKIT
         //--------------------------------------------------
-
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader(
             'Content-Disposition',
@@ -651,147 +605,72 @@ exports.gerarPdfEstoque = async (req, res) => {
         );
 
         const doc = new PDFDocument({
-
             size: 'A4',
-
             layout: 'landscape',
-
             margin: 20,
-
             bufferPages: true
-
         });
 
         doc.pipe(res);
 
         const dataHora = formatarDataHoraBR();
-
         desenharCabecalhoPaisagem(doc, dataHora);
 
         //--------------------------------------------------
-        // CONFIGURAÇÕES DAS COLUNAS
+        // CONFIGURAÇÕES DAS COLUNAS (Layout de 3 colunas)
         //--------------------------------------------------
-
         const margem = 20;
-
         const espaco = 12;
-
-        const larguraUtil =
-            doc.page.width - (margem * 2);
-
-        const larguraColuna =
-            (larguraUtil - (espaco * 2)) / 3;
+        const larguraUtil = doc.page.width - (margem * 2);
+        const larguraColuna = (larguraUtil - (espaco * 2)) / 3;
 
         const yInicial = 66;
-
-        const limitePagina =
-            doc.page.height - 25;
+        const limitePagina = doc.page.height - 25;
 
         let coluna = 1;
-
         let x = margem;
-
         let y = yInicial;
 
         //--------------------------------------------------
         // PERCORRER TODOS OS GRUPOS
         //--------------------------------------------------
-
         for (const grupo of listaGrupos) {
-
             const itens = grupos[grupo];
-
-            const alturaBloco =
-                calcularAlturaBloco(itens);
+            const alturaBloco = calcularAlturaBloco(itens);
 
             //---------------------------------------------
-            // QUEBRA DE COLUNA
+            // QUEBRA DE COLUNA / PÁGINA
             //---------------------------------------------
-
             if (y + alturaBloco > limitePagina) {
-
                 if (coluna === 1) {
-
                     coluna = 2;
-
-                    x =
-                        margem +
-                        larguraColuna +
-                        espaco;
-
+                    x = margem + larguraColuna + espaco;
                     y = yInicial;
-
                 }
-
                 else if (coluna === 2) {
-
                     coluna = 3;
-
-                    x =
-                        margem +
-                        (larguraColuna * 2) +
-                        (espaco * 2);
-
+                    x = margem + (larguraColuna * 2) + (espaco * 2);
                     y = yInicial;
-
                 }
-
                 else {
-
-                    //-------------------------------------
                     // NOVA PÁGINA
-                    //-------------------------------------
-
                     doc.addPage();
-
-                    desenharCabecalhoPaisagem(
-                        doc,
-                        dataHora
-                    );
+                    desenharCabecalhoPaisagem(doc, dataHora);
 
                     coluna = 1;
-
                     x = margem;
-
                     y = yInicial;
-
                 }
-
             }
 
-            //---------------------------------------------
-            // TÍTULO AZUL
-            //---------------------------------------------
+            // TÍTULO AZUL (BANDA: XXX)
+            y = desenharTituloGrupo(doc, grupo, x, y, larguraColuna);
 
-            y = desenharTituloGrupo(
-                doc,
-                grupo,
-                x,
-                y,
-                larguraColuna
-            );
+            // CABEÇALHO DA TABELA CORRESPONDENTE
+            y = desenharCabecalhoTabelaColuna(doc, x, y, larguraColuna);
 
-            //---------------------------------------------
-            // CABEÇALHO DA TABELA
-            //---------------------------------------------
-
-            y = desenharCabecalhoTabelaColuna(
-                doc,
-                x,
-                y,
-                larguraColuna
-            );
-
-            //---------------------------------------------
-            // AQUI COMEÇA A IMPRESSÃO DAS LINHAS
-            //---------------------------------------------
-
-                        //---------------------------------------------
-            // LINHAS DA TABELA
-            //---------------------------------------------
-
+            // IMPRESSÃO DAS LINHAS
             itens.forEach((item, indice) => {
-
                 y = desenharLinhaTabelaColuna(
                     doc,
                     x,
@@ -800,65 +679,40 @@ exports.gerarPdfEstoque = async (req, res) => {
                     item,
                     indice % 2 !== 0
                 );
-
             });
 
-            //---------------------------------------------
             // ESPAÇO ENTRE BLOCOS
-            //---------------------------------------------
-
             y += 8;
-
         }
 
         //--------------------------------------------------
-        // PAGINAÇÃO
+        // PAGINAÇÃO DINÂMICA
         //--------------------------------------------------
-
         const paginas = doc.bufferedPageRange();
-
         for (let i = 0; i < paginas.count; i++) {
-
             doc.switchToPage(i);
 
             doc.font('Helvetica')
                 .fontSize(8)
                 .fillColor('#666666')
                 .text(
-
                     `Página ${i + 1} de ${paginas.count}`,
-
                     20,
-
                     doc.page.height - 18,
-
                     {
                         width: doc.page.width - 40,
                         align: 'center'
                     }
-
                 );
-
         }
 
-        //--------------------------------------------------
         // FINALIZA PDF
-        //--------------------------------------------------
-
         doc.end();
 
-    }
-
-    catch (erro) {
-
+    } catch (erro) {
         console.error(erro);
-
         return res.status(500).json({
-
             mensagem: 'Erro ao gerar PDF.'
-
         });
-
     }
-
 };
