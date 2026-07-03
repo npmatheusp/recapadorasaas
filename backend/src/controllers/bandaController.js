@@ -305,8 +305,9 @@ function formatarDataHoraBR() {
     }).format(new Date());
 }
 
-function extrairGrupoBanda(codigo = '') {
-    return String(codigo).trim().split(/\s+/)[0] || 'SEM GRUPO';
+// Extrai a primeira palavra do texto para servir como cabeçalho do grupo
+function extrairGrupoBanda(texto = '') {
+    return String(texto).trim().split(/\s+/)[0] || 'SEM GRUPO';
 }
 
 // Limpa de forma inteligente os sufixos deixando apenas o essencial (ex: RTAW 220M)
@@ -376,15 +377,16 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
 
     // Renderizar itens do grupo
     itens.forEach(item => {
-        const codigoLimpo = limparSufixoInutil(item.codigo);
+        // Usa a descrição limpa para exibição no relatório
+        const descricaoLimpa = limparSufixoInutil(item.descricao || item.codigo);
         const estoque = Number(item.estoque_total || 0).toString();
 
         doc.fillColor(CORES.texto)
             .font('Helvetica')
             .fontSize(9);
 
-        // Texto do código (Ex: RTAW 220M)
-        doc.text(codigoLimpo, x, y, {
+        // Texto do item (Ordenado por Descrição)
+        doc.text(descricaoLimpa, x, y, {
             width: larguraColuna * 0.75,
             ellipsis: true
         });
@@ -414,6 +416,7 @@ function calcularAlturaBloco(itens) {
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
+        // Mudança aqui: Agora busca ordenando por 'descricao' do banco de dados
         const [bandas] = await pool.execute(`
             SELECT
                 id,
@@ -423,13 +426,16 @@ exports.gerarPdfEstoque = async (req, res) => {
                 ativo
             FROM bandas
             WHERE ativo = TRUE
-            ORDER BY codigo
+            ORDER BY descricao ASC, codigo ASC
         `);
 
-        // Agrupar itens por desenho
+        // Agrupar itens por desenho usando o campo 'descricao'
         const grupos = {};
         bandas.forEach(item => {
-            const grupo = extrairGrupoBanda(item.codigo);
+            // Se não houver descrição, usa o código como fallback para não quebrar
+            const textoParaGrupo = item.descricao ? item.descricao : item.codigo;
+            const grupo = extrairGrupoBanda(textoParaGrupo);
+            
             if (!grupos[grupo]) {
                 grupos[grupo] = [];
             }
