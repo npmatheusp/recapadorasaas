@@ -305,12 +305,10 @@ function formatarDataHoraBR() {
     }).format(new Date());
 }
 
-// Extrai a primeira palavra do texto para servir como cabeçalho do grupo
 function extrairGrupoBanda(texto = '') {
     return String(texto).trim().split(/\s+/)[0] || 'SEM GRUPO';
 }
 
-// Limpa de forma inteligente os sufixos deixando apenas o essencial (ex: RTAW 220M)
 function limparSufixoInutil(texto) {
     if (!texto) return '';
     return String(texto)
@@ -323,7 +321,9 @@ function limparSufixoInutil(texto) {
 
 const CORES = {
     azul: '#0B4F8C',
-    texto: '#222222'
+    texto: '#222222',
+    zebra: '#F7F9FB', // Fundo bem suave para o zebrado
+    linha: '#EAEAEA'   // Linha divisória bem discreta
 };
 
 // ======================================================
@@ -364,7 +364,7 @@ function desenharCabecalhoPaisagem(doc, dataHora) {
 }
 
 // ======================================================
-// DESENHAR BLOCO SIMPLIFICADO
+// DESENHAR BLOCO COM EFEITO ZEBRADO E LINHAS
 // ======================================================
 function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
     // Título do Grupo (Ex: RTAW)
@@ -373,42 +373,55 @@ function desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna) {
         .fontSize(10)
         .text(grupo, x, y);
     
-    y += 14; // Espaço após o título do grupo
+    y += 14; 
 
-    // Renderizar itens do grupo
-    itens.forEach(item => {
-        // Usa a descrição limpa para exibição no relatório
+    // Renderizar itens do grupo com efeito zebrado e linhas horizontais
+    itens.forEach((item, indice) => {
         const descricaoLimpa = limparSufixoInutil(item.descricao || item.codigo);
         const estoque = Number(item.estoque_total || 0).toString();
+        const alturaLinha = 14;
+
+        // Efeito Zebrado: Aplica fundo cinza claro nas linhas ímpares
+        if (indice % 2 !== 0) {
+            doc.rect(x - 2, y, larguraColuna + 4, alturaLinha)
+                .fill(CORES.zebra);
+        }
 
         doc.fillColor(CORES.texto)
             .font('Helvetica')
             .fontSize(9);
 
-        // Texto do item (Ordenado por Descrição)
-        doc.text(descricaoLimpa, x, y, {
-            width: larguraColuna * 0.75,
+        // Texto do item (Descrição)
+        doc.text(descricaoLimpa, x + 2, y + 2.5, {
+            width: larguraColuna * 0.75 - 2,
             ellipsis: true
         });
 
-        // Quantidade alinhada à direita do bloco
+        // Quantidade alinhada à direita
         doc.font('Helvetica-Bold')
-            .text(estoque, x + (larguraColuna * 0.75), y, {
-                width: larguraColuna * 0.25,
+            .text(estoque, x + (larguraColuna * 0.75), y + 2.5, {
+                width: larguraColuna * 0.25 - 2,
                 align: 'right'
             });
 
-        y += 12; // Espaçamento entre as linhas de dados
+        // Desenha a linha horizontal inferior separadora
+        doc.moveTo(x - 2, y + alturaLinha)
+            .lineTo(x + larguraColuna + 2, y + alturaLinha)
+            .lineWidth(0.4)
+            .strokeColor(CORES.linha)
+            .stroke();
+
+        y += alturaLinha; 
     });
 
-    return y; // Retorna o novo Y atualizado
+    return y; 
 }
 
 // ======================================================
-// CALCULA ALTURA DO BLOCO CLEAN
+// CALCULA ALTURA DO BLOCO (AJUSTADO)
 // ======================================================
 function calcularAlturaBloco(itens) {
-    return 14 + (itens.length * 12) + 15; // Título + Linhas + Margem inferior entre blocos
+    return 14 + (itens.length * 14) + 15; 
 }
 
 // ======================================================
@@ -416,7 +429,6 @@ function calcularAlturaBloco(itens) {
 // ======================================================
 exports.gerarPdfEstoque = async (req, res) => {
     try {
-        // Mudança aqui: Agora busca ordenando por 'descricao' do banco de dados
         const [bandas] = await pool.execute(`
             SELECT
                 id,
@@ -429,10 +441,9 @@ exports.gerarPdfEstoque = async (req, res) => {
             ORDER BY descricao ASC, codigo ASC
         `);
 
-        // Agrupar itens por desenho usando o campo 'descricao'
+        // Agrupar itens por desenho
         const grupos = {};
         bandas.forEach(item => {
-            // Se não houver descrição, usa o código como fallback para não quebrar
             const textoParaGrupo = item.descricao ? item.descricao : item.codigo;
             const grupo = extrairGrupoBanda(textoParaGrupo);
             
@@ -444,7 +455,7 @@ exports.gerarPdfEstoque = async (req, res) => {
 
         const listaGrupos = Object.keys(grupos).sort();
 
-        // Configuração de Resposta do Servidor
+        // Configuração de Resposta
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader(
             'Content-Disposition',
@@ -463,14 +474,14 @@ exports.gerarPdfEstoque = async (req, res) => {
         const dataHora = formatarDataHoraBR();
         desenharCabecalhoPaisagem(doc, dataHora);
 
-        // Grid Layout de 3 Colunas limpas paralelas
+        // Grid Layout de 3 Colunas
         const margem = 20;
-        const espacoFator = 20; // Espaço entre as colunas
+        const espacoFator = 20; 
         const larguraUtil = doc.page.width - (margem * 2);
         const larguraColuna = (larguraUtil - (espacoFator * 2)) / 3;
 
         const yInicial = 60;
-        const limitePagina = doc.page.height - 25;
+        const limitePagina = doc.page.height - 30; // Margem de segurança inferior aumentada para evitar páginas vazias
 
         let coluna = 1;
         let x = margem;
@@ -481,7 +492,7 @@ exports.gerarPdfEstoque = async (req, res) => {
             const itens = grupos[grupo];
             const alturaBloco = calcularAlturaBloco(itens);
 
-            // Validação de quebra de colunas e páginas dinâmicas
+            // Validação rigorosa de quebra de colunas e páginas dinâmicas
             if (y + alturaBloco > limitePagina) {
                 if (coluna === 1) {
                     coluna = 2;
@@ -503,14 +514,14 @@ exports.gerarPdfEstoque = async (req, res) => {
                 }
             }
 
-            // Desenha o bloco simplificado solicitado
+            // Desenha o bloco com efeito zebrado e linhas
             y = desenharBlocoGrupo(doc, grupo, itens, x, y, larguraColuna);
             
-            // Espaçamento extra de segurança entre grupos na mesma coluna
+            // Espaçamento entre blocos na mesma coluna
             y += 15; 
         }
 
-        // Paginação Dinâmica Inferior
+        // Paginação Dinâmica Inferior Sem Duplicar Páginas
         const paginas = doc.bufferedPageRange();
         for (let i = 0; i < paginas.count; i++) {
             doc.switchToPage(i);
