@@ -107,6 +107,10 @@
                 Lançar Venda
             </a>
 
+            <a href="relatorio-vendas.html" id="menuRelatorio" class="btn btn-sm btn-outline-light">
+                Relatório Mensal
+            </a>
+
             <a href="gerenciar-pneus.html" id="menuGerenciarPneus" class="btn btn-sm btn-outline-light">
                 Gerenciar Pneus
             </a>
@@ -208,13 +212,15 @@
         const compras = document.getElementById('menuCompras');
         const consultaPneus = document.getElementById('menuConsultaPneus');
         const gerenciarPneus = document.getElementById('menuGerenciarPneus');
-        const vendas = document.getElementById('menuVendas'); // Resguarda a tela de vendas do setor de produção
+        const vendas = document.getElementById('menuVendas'); 
+        const relatorio = document.getElementById('menuRelatorio'); // Resguarda o novo botão de relatório
         
         if (bandas) bandas.style.display = 'none';
         if (compras) compras.style.display = 'none'; 
         if (consultaPneus) consultaPneus.style.display = 'none';
         if (gerenciarPneus) gerenciarPneus.style.display = 'none';
-        if (vendas) vendas.style.display = 'none'; // Esconde o botão vendas para Produção
+        if (vendas) vendas.style.display = 'none'; 
+        if (relatorio) relatorio.style.display = 'none'; // Esconde relatório financeiro para Produção
     }
 
     if (perfil === 'ADMIN') {

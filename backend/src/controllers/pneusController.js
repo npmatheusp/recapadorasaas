@@ -168,3 +168,39 @@ exports.registrarVenda = async (req, res) => {
         return res.status(500).json({ mensagem: 'Erro interno no servidor ao registrar a venda.' });
     }
 };
+
+// 🔥 ADICIONE NO SEU controllers/pneusController.js (RELATÓRIO MENSAL)
+exports.obterRelatorioVendas = async (req, res) => {
+    try {
+        const { mes } = req.query; // Recebe o formato "YYYY-MM" vindo do frontend
+
+        if (!mes) {
+            return res.status(400).json({ mensagem: 'O parâmetro mês é obrigatório.' });
+        }
+
+        // Busca as vendas juntando com as informações do pneu para o Excel ficar completo
+        const [vendas] = await pool.execute(`
+            SELECT 
+                v.id,
+                v.cliente,
+                v.vendedor,
+                v.quantidade,
+                v.valor_total,
+                v.porcentagem_comissao,
+                v.valor_comissao,
+                v.data_venda,
+                p.medida,
+                p.marca_modelo
+            FROM vendas_pneus_novos v
+            LEFT JOIN pneus_novos p ON v.pneu_id = p.id
+            WHERE DATE_FORMAT(v.data_venda, '%Y-%m') = ?
+            ORDER BY v.data_venda DESC
+        `, [mes]);
+
+        return res.json(vendas);
+
+    } catch (error) {
+        console.error('Erro ao gerar relatório de vendas:', error);
+        return res.status(500).json({ mensagem: 'Erro interno ao obter relatório.' });
+    }
+};

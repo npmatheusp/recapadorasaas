@@ -4,6 +4,8 @@ const pneusController = require('../controllers/pneusController'); // ajuste o c
 
 // LINK DA CONSULTA ONLINE DO VENDEDOR (Celular / Computador)
 router.get('/pneus-novos/online', pneusController.consultarEstoqueOnline);
+// 🔥 ADICIONE ESTA LINHA NO SEU routes/pneusRoutes.js
+router.get('/vendas/relatorio', pneusController.obterRelatorioVendas);
 
 // LINKS DE ADMINISTRAÇÃO (Para você controlar)
 router.get('/pneus-novos', pneusController.listarTodos);
