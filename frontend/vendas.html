@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lançar Venda - Pneus Novos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f5f7fb;
+        }
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+        }
+        .scroll-menu {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scroll-menu::-webkit-scrollbar {
+            display: none;
+        }
+        .form-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.08);
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .page-title {
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .resultado-comissao {
+            background: #e8f5e9;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid flex-column flex-md-row align-items-start align-items-md-center gap-2">
+        <span class="navbar-brand mb-0 h1 fs-5">Sistema de Recapadora</span>
+        
+        <div class="scroll-menu w-100 justify-content-start justify-content-md-end gap-2">
+            <a href="dashboard.html" class="btn btn-sm btn-outline-light">Dashboard</a>
+            <a href="bandas.html" id="menuBandas" class="btn btn-sm btn-outline-light">Estoque</a>
+            <a href="consulta-pneus.html" id="menuConsultaPneus" class="btn btn-sm btn-outline-light">Estoque Pneus Novos</a>
+            <a href="vendas.html" id="menuVendas" class="btn btn-sm btn-warning fw-bold">Lançar Venda</a>
+            <a href="gerenciar-pneus.html" id="menuGerenciarPneus" class="btn btn-sm btn-outline-light">Gerenciar Pneus</a>
+            <a href="producao.html" id="menuProducao" class="btn btn-sm btn-outline-light">Produção</a>
+            <a href="compras.html" id="menuCompras" class="btn btn-sm btn-outline-light">Compras (XML)</a>
+            <button onclick="logout()" class="btn btn-sm btn-danger">Sair</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container px-3 mt-4">
+    <h2 class="page-title text-dark text-center">Registrar Venda de Pneu Novo</h2>
+
+    <div class="form-card">
+        <form id="formVenda" class="row g-3">
+            
+            <div class="col-12">
+                <label class="form-label fw-bold text-secondary">Selecione o Pneu Vendido</label>
+                <select id="pneuSelect" class="form-select form-select-md" required>
+                    <option value="" disabled selected>Carregando pneus disponíveis...</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold text-secondary">Nome do Cliente</label>
+                <input type="text" id="cliente" class="form-control" placeholder="Ex: Transportadora Silva" required>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold text-secondary">Nome do Vendedor</label>
+                <input type="text" id="vendedor" class="form-control" placeholder="Ex: João Souza" required>
+            </div>
+
+            <div class="col-6 col-md-4">
+                <label class="form-label fw-bold text-secondary">Quantidade</label>
+                <input type="number" id="quantidade" class="form-control" min="1" value="1" required>
+            </div>
+
+            <div class="col-6 col-md-4">
+                <label class="form-label fw-bold text-secondary">Valor Total (R$)</label>
+                <input type="number" id="valorTotal" class="form-control" min="0" step="0.01" placeholder="0.00" required>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold text-secondary">% Comissão</label>
+                <input type="number" id="porcentagemComissao" class="form-control" min="0" step="0.1" value="0" placeholder="Ex: 2.5">
+            </div>
+
+            <div class="col-12 mt-4">
+                <div class="resultado-comissao d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-success">Valor da Comissão:</span>
+                    <span id="valorComissaoReais" class="fw-bold text-success fs-5">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="col-12 mt-4">
+                <button type="submit" class="btn btn-success w-100 fw-bold py-2">Finalizar Venda e Baixar Estoque</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    const perfil = localStorage.getItem('perfil');
+
+    // Restrições de segurança padrão
+    if (perfil === 'PRODUCAO') {
+        window.location.href = 'dashboard.html';
+    }
+    if (perfil === 'VENDEDOR') {
+        if (document.getElementById('menuProducao')) document.getElementById('menuProducao').remove();
+        if (document.getElementById('menuCompras')) document.getElementById('menuCompras').remove(); 
+        if (document.getElementById('menuGerenciarPneus')) document.getElementById('menuGerenciarPneus').remove(); 
+    }
+
+    // Busca os pneus do banco para listar no select campo de escolha
+    async function carregarPneusNoSelect() {
+        try {
+            const response = await fetch('/api/pneus-novos/online');
+            if (!response.ok) throw new Error();
+            const pneus = await response.json();
+            
+            const select = document.getElementById('pneuSelect');
+            select.innerHTML = '<option value="" disabled selected>Escolha a medida/marca...</option>';
+            
+            pneus.forEach(pneu => {
+                if(pneu.quantidade_disponivel > 0) {
+                    const option = document.createElement('option');
+                    option.value = pneu.id;
+                    option.textContent = `${pneu.medida} - ${pneu.marca_modelo} (Disp: ${pneu.quantidade_disponivel} UN)`;
+                    select.appendChild(option);
+                }
+            });
+        } catch (error) {
+            document.getElementById('pneuSelect').innerHTML = '<option value="">Erro ao carregar pneus</option>';
+        }
+    }
+
+    // Função matemática que escuta alterações nos campos e calcula a comissão na hora
+    function calcularComissao() {
+        const valorTotal = parseFloat(document.getElementById('valorTotal').value) || 0;
+        const porcentagem = parseFloat(document.getElementById('porcentagemComissao').value) || 0;
+        
+        const valorComissao = (valorTotal * (porcentagem / 100));
+        
+        document.getElementById('valorComissaoReais').textContent = valorComissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return valorComissao;
+    }
+
+    document.getElementById('valorTotal').addEventListener('input', calcularComissao);
+    document.getElementById('porcentagemComissao').addEventListener('input', calcularComissao);
+
+    // Evento de envio do formulário para salvar a venda e dar baixa
+    document.getElementById('formVenda').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const valorComissaoCalculado = calcularComissao();
+        
+        const dadosVenda = {
+            pneu_id: document.getElementById('pneuSelect').value,
+            cliente: document.getElementById('cliente').value,
+            vendedor: document.getElementById('vendedor').value,
+            quantidade: parseInt(document.getElementById('quantidade').value),
+            valor_total: parseFloat(document.getElementById('valorTotal').value),
+            porcentagem_comissao: parseFloat(document.getElementById('porcentagemComissao').value),
+            valor_comissao: valorComissaoCalculado,
+            data_venda: new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD (Dia atual)
+        };
+
+        try {
+            const response = await fetch('/api/vendas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosVenda)
+            });
+
+            if (response.ok) {
+                alert('Venda registrada com sucesso e estoque atualizado!');
+                document.getElementById('formVenda').reset();
+                document.getElementById('valorComissaoReais').textContent = "R$ 0,00";
+                carregarPneusNoSelect(); // Recarrega o estoque atualizado no select
+            } else {
+                alert('Erro ao registrar venda. Verifique se há saldo suficiente.');
+            }
+        } catch (error) {
+            alert('Erro de conexão com o servidor.');
+        }
+    });
+
+    function logout(){
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+
+    carregarPneusNoSelect();
+</script>
+</body>
+</html>
