@@ -12,60 +12,91 @@
         .navbar {
             box-shadow: 0 2px 10px rgba(0,0,0,.1);
         }
+        /* Ajuste do menu para rolar de lado no celular em vez de quebrar a tela */
+        .scroll-menu {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scroll-menu::-webkit-scrollbar {
+            display: none; /* Oculta a barra de rolagem estética */
+        }
         .table-card {
             background: #fff;
             border-radius: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,.08);
-            padding: 20px;
+            padding: 15px;
+        }
+        @media (min-width: 768px) {
+            .table-card {
+                padding: 25px;
+            }
         }
         .page-title {
             font-weight: bold;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
         }
         .badge-qtd {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 8px;
+            white-space: nowrap;
+        }
+        /* Força a tabela a manter os textos na mesma linha sem quebras feias */
+        .table-custom th, .table-custom td {
+            white-space: nowrap;
+            padding: 10px 8px !important;
         }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-        <span class="navbar-brand">Sistema de Recapadora</span>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="dashboard.html" class="btn btn-warning">Dashboard</a>
-                                   
-            <button onclick="logout()" class="btn btn-danger">Sair</button>
+    <div class="container-fluid flex-column flex-md-row align-items-start align-items-md-center gap-2">
+        <span class="navbar-brand mb-0 h1 fs-5">Sistema de Recapadora</span>
+        
+        <div class="scroll-menu w-100 justify-content-start justify-content-md-end gap-2">
+            <a href="dashboard.html" class="btn btn-sm btn-warning fw-bold">Dashboard</a>
+            <a href="bandas.html" id="menuBandas" class="btn btn-sm btn-outline-light">Estoque</a>
+            <a href="consulta-pneus.html" id="menuConsultaPneus" class="btn btn-sm btn-outline-light">Estoque Pneus Novos</a>
+            <a href="gerenciar-pneus.html" id="menuGerenciarPneus" class="btn btn-sm btn-outline-light">Gerenciar Pneus</a>
+            <a href="producao.html" id="menuProducao" class="btn btn-sm btn-outline-light">Produção</a>
+            <a href="compras.html" id="menuCompras" class="btn btn-sm btn-outline-light">Compras (XML)</a>
+            <button onclick="logout()" class="btn btn-sm btn-danger">Sair</button>
         </div>
     </div>
 </nav>
 
-<div class="container mt-4">
-    <h2 class="page-title text-dark">
-        Estoque Online de Pneus Novos
-    </h2>
+<div class="container-fluid px-3 mt-4" style="max-width: 1200px;">
+    <h2 class="page-title text-dark">Estoque Online de Pneus Novos</h2>
 
     <div class="table-card">
-        <div class="mb-4">
-            <label for="inputBusca" class="form-label fw-bold text-secondary">Filtrar Pneus</label>
-            <input type="text" id="inputBusca" class="form-control form-control-lg" placeholder="Digite a medida, marca ou modelo para buscar na hora...">
+        <div class="mb-3">
+            <label for="inputBusca" class="form-label fw-bold text-secondary fs-6">Filtrar Pneus</label>
+            <input type="text" id="inputBusca" class="form-control form-control-md" placeholder="Buscar medida, marca ou modelo...">
         </div>
 
         <div id="loading" class="text-center my-4">
             <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">Consultando estoque em tempo real...</p>
+            <p class="text-muted mt-2 small">Consultando estoque em tempo real...</p>
         </div>
 
         <div class="table-responsive">
-            <table id="tabelaPneus" class="table table-striped table-hover align-middle" style="display: none;">
+            <table id="tabelaPneus" class="table table-custom table-striped table-hover align-middle" style="display: none; width: 100%;">
                 <thead class="table-dark">
                     <tr>
                         <th>Medida</th>
                         <th>Marca / Modelo</th>
-                        <th class="text-center" style="width: 150px;">Disponível em Estoque</th>
+                        <th class="text-center" style="width: 120px;">Estoque</th>
                     </tr>
                 </thead>
                 <tbody id="corpoTabela">
@@ -79,16 +110,14 @@
     const perfil = localStorage.getItem('perfil');
     let todosOsPneus = [];
 
-    // Trava de Segurança por Perfil
     if (perfil === 'PRODUCAO') {
         window.location.href = 'dashboard.html';
     }
 
-    // Controle do Menu Superior
     if (perfil === 'VENDEDOR') {
-        if (document.getElementById('menuProducao')) document.getElementById('menuProducao').style.display = 'none';
-        if (document.getElementById('menuCompras')) document.getElementById('menuCompras').style.display = 'none'; 
-        if (document.getElementById('menuGerenciarPneus')) document.getElementById('menuGerenciarPneus').style.display = 'none'; 
+        if (document.getElementById('menuProducao')) document.getElementById('menuProducao').remove();
+        if (document.getElementById('menuCompras')) document.getElementById('menuCompras').remove(); 
+        if (document.getElementById('menuGerenciarPneus')) document.getElementById('menuGerenciarPneus').remove(); 
     }
 
     async function carregarEstoque() {
@@ -101,7 +130,7 @@
             document.getElementById('tabelaPneus').style.display = 'table';
             renderizarTabela(todosOsPneus);
         } catch (error) {
-            document.getElementById('loading').innerHTML = `<p class="text-danger fw-bold">Erro ao conectar com o servidor.</p>`;
+            document.getElementById('loading').innerHTML = `<p class="text-danger fw-bold small">Erro ao conectar com o servidor.</p>`;
         }
     }
 
@@ -110,7 +139,7 @@
         corpo.innerHTML = '';
 
         if(lista.length === 0) {
-            corpo.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">Nenhum pneu disponível em estoque no momento.</td></tr>`;
+            corpo.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3 small">Nenhum pneu em estoque.</td></tr>`;
             return;
         }
 
@@ -118,7 +147,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><span class="fw-bold text-primary">${pneu.medida}</span></td>
-                <td>${pneu.marca_modelo}</td>
+                <td><span class="text-dark fw-medium">${pneu.marca_modelo}</span></td>
                 <td class="text-center">
                     <span class="badge bg-success badge-qtd">${pneu.quantidade_disponivel} UN</span>
                 </td>
