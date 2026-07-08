@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Estoque de Pneus Novos</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2, h3 { color: #0b2c66; margin-top: 0; }
+        .form-cadastro { display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 10px; margin-bottom: 30px; background: #f8f9fa; padding: 15px; border-radius: 6px; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background-color: #0b2c66; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #113d8c; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #dfe8f3; color: #0b2c66; }
+        .input-qtd { width: 60px; text-align: center; padding: 5px; }
+        .btn-salvar-qtd { background-color: #28a745; padding: 5px 10px; font-size: 12px; }
+        .btn-salvar-qtd:hover { background-color: #218838; }
+        .btn-deletar { background-color: #dc3545; padding: 5px 10px; font-size: 12px; }
+        .btn-deletar:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚙️ GERENCIAR ESTOQUE DE PNEUS NOVOS</h2>
+    
+    <h3>Cadastrar Novo Pneu</h3>
+    <form id="formCadastro" class="form-cadastro">
+        <div class="form-group">
+            <label>Medida</label>
+            <input type="text" id="medida" placeholder="Ex: 295/80R22.5" required>
+        </div>
+        <div class="form-group">
+            <label>Marca / Modelo</label>
+            <input type="text" id="marca_modelo" placeholder="Ex: MICHELIN - X LINE" required>
+        </div>
+        <div class="form-group">
+            <label>Qtd Inicial</label>
+            <input type="number" id="quantidade" value="0" min="0">
+        </div>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <h3>Itens Cadastrados</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Medida</th>
+                <th>Marca / Modelo</th>
+                <th style="width: 160px; text-align: center;">Quantidade Atual</th>
+                <th style="width: 80px; text-align: center;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="corpoGerenciamento">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // Carregar todos os pneus cadastrados (inclui zerados)
+    async function carregarPneus() {
+        try {
+            const response = await fetch('/api/pneus-novos');
+            const pneus = await response.json();
+            
+            const corpo = document.getElementById('corpoGerenciamento');
+            corpo.innerHTML = '';
+
+            pneus.forEach(pneu => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${pneu.medida}</strong></td>
+                    <td>${pneu.marca_modelo}</td>
+                    <td style="text-align: center;">
+                        <input type="number" class="input-qtd" id="qtd-${pneu.id}" value="${pneu.quantidade_disponivel}" min="0">
+                        <button class="btn-salvar-qtd" onclick="atualizarEstoque(${pneu.id})">Salvar</button>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-deletar" onclick="excluirPneu(${pneu.id})">Excluir</button>
+                    </td>
+                `;
+                corpo.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Erro ao listar pneus:', error);
+        }
+    }
+
+    // Evento de Envio do Formulário de Cadastro
+    document.getElementById('formCadastro').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const dados = {
+            medida: document.getElementById('medida').value,
+            marca_modelo: document.getElementById('marca_modelo').value,
+            quantidade_disponivel: document.getElementById('quantidade').value
+        };
+
+        try {
+            const response = await fetch('/api/pneus-novos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
+
+            if (response.ok) {
+                alert('Pneu cadastrado com sucesso!');
+                document.getElementById('formCadastro').reset();
+                carregarPneus();
+            } else {
+                const err = await response.json();
+                alert('Erro: ' + err.mensagem);
+            }
+        } catch (error) {
+            alert('Erro ao conectar ao servidor');
+        }
+    });
+
+    // Função para atualizar estoque de um item individualmente
+    async function atualizarEstoque(id) {
+        const novaQtd = document.getElementById(`qtd-${id}`).value;
+        
+        try {
+            const response = await fetch(`/api/pneus-novos/${id}/estoque`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantidade: novaQtd })
+            });
+
+            if (response.ok) {
+                alert('Estoque atualizado!');
+                carregarPneus();
+            } else {
+                alert('Erro ao atualizar estoque');
+            }
+        } catch (error) {
+            alert('Erro na requisição');
+        }
+    }
+
+    // Função para desativar/excluir item
+    async function excluirPneu(id) {
+        if (!confirm('Deseja mesmo remover este pneu do sistema?')) return;
+
+        try {
+            const response = await fetch(`/api/pneus-novos/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert('Pneu removido!');
+                carregarPneus();
+            }
+        } catch (error) {
+            alert('Erro na requisição');
+        }
+    }
+
+    // Inicialização
+    carregarPneus();
+</script>
+</body>
+</html>

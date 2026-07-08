@@ -12,6 +12,7 @@ const movimentacaoRoutes = require('./routes/movimentacaoRoutes');
 const producaoRoutes = require('./routes/producaoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const compraRoutes = require('./routes/compraRoutes'); // 🔥 NOVA ROTA DE XML DE COMPRAS
+const pneusRoutes = require('./routes/pneusRoutes');   // 🛞 NOVA ROTA EXCLUSIVA PARA PNEUS NOVOS
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/movimentacoes', movimentacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/producao', producaoRoutes);
 app.use('/api/compras', compraRoutes); // 🔥 ENDPOINT PARA IMPORTAÇÃO DE XML
+app.use('/api', pneusRoutes);          // 🛞 ENDPOINT EXCLUSIVO PARA PNEUS NOVOS
 
 // =========================
 // STATUS DA API

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estoque Online - Pneus Novos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 15px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #0b2c66;
+            margin-top: 0;
+            text-align: center;
+            border-bottom: 2px solid #0b2c66;
+            padding-bottom: 10px;
+        }
+        .busca-container {
+            margin-bottom: 20px;
+        }
+        .busca-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #0b2c66;
+            color: white;
+            font-size: 14px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .qtd-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .qtd-alerta {
+            background-color: #dc3545;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🛞 ESTOQUE ONLINE - PNEUS NOVOS</h2>
+    
+    <div class="busca-container">
+        <input type="text" id="inputBusca" class="busca-input" placeholder="Digite a medida ou marca para buscar...">
+    </div>
+
+    <div id="loading" class="loading">Carregando estoque em tempo real...</div>
+
+    <table id="tabelaPneus" style="display: none;">
+        <thead>
+            <tr>
+                <th>Medida</th>
+                <th>Marca / Modelo</th>
+                <th style="text-align: center; width: 100px;">Disponível</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabela">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    let todosOsPneus = [];
+
+    // Função para buscar dados do Backend
+    async function carregarEstoque() {
+        try {
+            // Se o seu frontend rodar em porta diferente do backend, mude para http://localhost:3000/api/pneus-novos/online
+            const response = await fetch('/api/pneus-novos/online');
+            if (!response.ok) throw new Error('Erro ao buscar dados');
+            
+            todosOsPneus = await response.json();
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('tabelaPneus').style.display = 'table';
+            
+            renderizarTabela(todosOsPneus);
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loading').innerText = 'Erro ao carregar o estoque. Tente novamente.';
+        }
+    }
+
+    // Função para renderizar as linhas na tabela
+    function renderizarTabela(lista) {
+        const corpo = document.getElementById('corpoTabela');
+        corpo.innerHTML = '';
+
+        if(lista.length === 0) {
+            corpo.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#999;">Nenhum pneu disponível no momento.</td></tr>`;
+            return;
+        }
+
+        lista.forEach(pneu => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${pneu.medida}</strong></td>
+                <td>${pneu.marca_modelo}</td>
+                <td style="text-align: center;">
+                    <span class="qtd-badge">${pneu.quantidade_disponivel}</span>
+                </td>
+            `;
+            corpo.appendChild(tr);
+        });
+    }
+
+    // Evento de busca em tempo real (Filtro)
+    document.getElementById('inputBusca').addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase().trim();
+        
+        const filtrados = todosOsPneus.filter(pneu => {
+            return pneu.medida.toLowerCase().includes(termo) || 
+                   pneu.marca_modelo.toLowerCase().includes(termo);
+        });
+        
+        renderizarTabela(filtrados);
+    });
+
+    // Inicializa ao abrir a página
+    carregarEstoque();
+</script>
+</body>
+</html>

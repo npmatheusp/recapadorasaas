@@ -90,6 +90,14 @@
                 Estoque
             </a>
 
+            <a href="consulta-pneus.html" id="menuConsultaPneus" class="btn btn-outline-info text-white">
+                🛞 Pneus Novos (Online)
+            </a>
+
+            <a href="gerenciar-pneus.html" id="menuGerenciarPneus" class="btn btn-outline-light">
+                ⚙️ Gerenciar Pneus
+            </a>
+
             <a href="producao.html" id="menuProducao" class="btn btn-outline-light">
                 Produção
             </a>
@@ -169,21 +177,32 @@
     // Recupera o perfil do localStorage para controle de telas
     const perfil = localStorage.getItem('perfil');
 
-    // 🛡️ Controle de visibilidade baseado em perfis (Apenas ADMIN vê compras e suas respectivas telas)
+    // 🛡️ Controle de visibilidade baseado em perfis
     if (perfil === 'VENDEDOR') {
         const producao = document.getElementById('menuProducao');
         const compras = document.getElementById('menuCompras');
+        const gerenciarPneus = document.getElementById('menuGerenciarPneus');
         
         if (producao) producao.style.display = 'none';
         if (compras) compras.style.display = 'none'; 
+        if (gerenciarPneus) gerenciarPneus.style.display = 'none'; // Vendedor NÃO gerencia estoque
     }
 
     if (perfil === 'PRODUCAO') {
         const bandas = document.getElementById('menuBandas');
         const compras = document.getElementById('menuCompras');
+        const consultaPneus = document.getElementById('menuConsultaPneus');
+        const gerenciarPneus = document.getElementById('menuGerenciarPneus');
         
         if (bandas) bandas.style.display = 'none';
         if (compras) compras.style.display = 'none'; 
+        if (consultaPneus) consultaPneus.style.display = 'none';
+        if (gerenciarPneus) gerenciarPneus.style.display = 'none';
+    }
+
+    if (perfil === 'ADMIN') {
+        // Administrador tem acesso a tudo! 
+        // Ocultamos apenas o botão de consulta limpa se preferir gerenciar direto, ou mantemos os dois ativos.
     }
 
     function logout(){
