@@ -24,11 +24,12 @@ if (
     window.location.href = "dashboard.html";
 }
 
-// Apenas ADMIN acessa reservas, compras, relatórios e gerenciamento de pneus
+// Apenas ADMIN acessa reservas, compras, relatórios, lançar vendas e gerenciamento de pneus
 if (
     (paginaAtual === "reservas.html" || 
      paginaAtual === "compras.html" || 
      paginaAtual === "relatorio-vendas.html" || 
+     paginaAtual === "vendas.html" || 
      paginaAtual === "gerenciar-pneus.html") &&
     perfil !== "ADMIN"
 ) {
@@ -56,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const menuReservas = document.getElementById("menuReservas");
     const menuProducao = document.getElementById("menuProducao");
     const menuCompras = document.getElementById("menuCompras");
+    const menuVendas = document.getElementById("menuVendas");
     const menuRelatorio = document.getElementById("menuRelatorio");
     const menuGerenciarPneus = document.getElementById("menuGerenciarPneus");
 
@@ -70,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (menuReservas) menuReservas.style.display = "none";
         if (menuProducao) menuProducao.style.display = "none";
         if (menuCompras) menuCompras.style.display = "none";
+        if (menuVendas) menuVendas.style.display = "none";
         if (menuRelatorio) menuRelatorio.style.display = "none";
         if (menuGerenciarPneus) menuGerenciarPneus.style.display = "none";
 
@@ -79,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     |--------------------------------------------------------------------------
     | PRODUÇÃO
     |--------------------------------------------------------------------------
-    | Não vê Reservas, Compras, Relatórios, Gerenciamento nem Estoques
+    | Não vê Reservas, Compras, Relatórios, Lançar Vendas, Gerenciamento nem Estoques
     */
     if (perfil === "PRODUCAO") {
 
@@ -87,6 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (menuConsultaPneus) menuConsultaPneus.style.display = "none";
         if (menuReservas) menuReservas.style.display = "none";
         if (menuCompras) menuCompras.style.display = "none";
+        if (menuVendas) menuVendas.style.display = "none";
         if (menuRelatorio) menuRelatorio.style.display = "none";
         if (menuGerenciarPneus) menuGerenciarPneus.style.display = "none";
 
