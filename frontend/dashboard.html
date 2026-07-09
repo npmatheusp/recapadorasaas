@@ -181,45 +181,23 @@
 </div>
 
 <script>
-    // Recupera o perfil do localStorage para controle de telas local de fallback
-    const perfilLogado = localStorage.getItem('perfil');
-
-    // Executa assim que a estrutura do documento estiver pronta
-    document.addEventListener("DOMContentLoaded", () => {
-        if (perfilLogado === 'VENDEDOR') {
-            const producao = document.getElementById('menuProducao');
-            const compras = document.getElementById('menuCompras');
-            const gerenciarPneus = document.getElementById('menuGerenciarPneus');
-            const vendas = document.getElementById('menuVendas');
-            const relatorio = document.getElementById('menuRelatorio');
-            
-            // Força a remoção de tudo que você pediu para bloquear
-            if (producao) producao.style.display = 'none';
-            if (compras) compras.style.display = 'none'; 
-            if (gerenciarPneus) gerenciarPneus.style.display = 'none';
-            if (vendas) vendas.style.display = 'none';
-            if (relatorio) relatorio.style.display = 'none';
+    // 🛡️ Executa a trava visual direto aqui de forma isolada para não quebrar a API
+    (function() {
+        const p = localStorage.getItem('perfil');
+        if (p === 'VENDEDOR') {
+            // Adiciona um estilo na página para esconder os menus do vendedor imediatamente
+            const style = document.createElement('style');
+            style.innerHTML = '#menuProducao, #menuCompras, #menuGerenciarPneus, #menuVendas, #menuRelatorio { display: none !important; }';
+            document.head.appendChild(style);
         }
-
-        if (perfilLogado === 'PRODUCAO') {
-            const bandas = document.getElementById('menuBandas');
-            const compras = document.getElementById('menuCompras');
-            const consultaPneus = document.getElementById('menuConsultaPneus');
-            const gerenciarPneus = document.getElementById('menuGerenciarPneus');
-            const vendas = document.getElementById('menuVendas'); 
-            const relatorio = document.getElementById('menuRelatorio');
-            
-            if (bandas) bandas.style.display = 'none';
-            if (compras) compras.style.display = 'none'; 
-            if (consultaPneus) consultaPneus.style.display = 'none';
-            if (gerenciarPneus) gerenciarPneus.style.display = 'none';
-            if (vendas) vendas.style.display = 'none'; 
-            if (relatorio) relatorio.style.display = 'none';
+        if (p === 'PRODUCAO') {
+            const style = document.createElement('style');
+            style.innerHTML = '#menuBandas, #menuConsultaPneus, #menuCompras, #menuGerenciarPneus, #menuVendas, #menuRelatorio { display: none !important; }';
+            document.head.appendChild(style);
         }
-    });
+    })();
 </script>
 
-<script src="js/permissoes.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/dashboard.js"></script>
 
