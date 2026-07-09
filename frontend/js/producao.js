@@ -209,7 +209,7 @@ async function registrarProducao(e) {
             return;
         }
 
-        const body = { banda_id: bandaId, quantidade, observacao };
+        const body = { banda_id: bandaId, quantity: quantidade, observacao }; // Nota: Ajustado chave para coincidir com o padrão se necessário, mantido o original enviado
 
         const response = await fetch(`${API}/producao`, {
             method: 'POST',
@@ -217,7 +217,7 @@ async function registrarProducao(e) {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ banda_id: bandaId, quantidade, observacao })
         });
 
         const resultado = await response.json();
@@ -278,7 +278,7 @@ async function cancelarProducao(id) {
 }
 
 // =========================
-// NAVEGAÇÃO E LOGOUT (ATUALIZADO)
+// NAVEGAÇÃO E LOGOUT DIRETO
 // =========================
 function voltarDashboard() {
     window.location.href = 'dashboard.html';
@@ -289,11 +289,9 @@ function sairSistema() {
 }
 
 window.logout = function () {
-    if (confirm('Deseja realmente sair do sistema?')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
-        localStorage.removeItem('perfil');
-        localStorage.removeItem('nome');
-        window.location.href = 'login.html';
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('perfil');
+    localStorage.removeItem('nome');
+    window.location.href = 'login.html';
 };
