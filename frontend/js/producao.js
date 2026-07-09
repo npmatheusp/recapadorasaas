@@ -246,7 +246,7 @@ async function registrarProducao(e) {
 }
 
 // =========================
-// 🔥 NOVA FUNÇÃO: CANCELAR PRODUÇÃO
+// CANCELAR PRODUÇÃO
 // =========================
 async function cancelarProducao(id) {
     if (!confirm('Tem certeza que deseja cancelar esta produção? A quantidade retornará ao estoque.')) {
@@ -269,7 +269,6 @@ async function cancelarProducao(id) {
 
         alert(resultado.mensagem);
         
-        // Recarrega as listas para atualizar a interface com os novos estoques
         await carregarBandas();
         await carregarHistorico();
     } catch (error) {
@@ -279,13 +278,17 @@ async function cancelarProducao(id) {
 }
 
 // =========================
-// NAVEGAÇÃO
+// NAVEGAÇÃO E LOGOUT (ATUALIZADO)
 // =========================
 function voltarDashboard() {
     window.location.href = 'dashboard.html';
 }
 
 function sairSistema() {
+    logout();
+}
+
+window.logout = function () {
     if (confirm('Deseja realmente sair do sistema?')) {
         localStorage.removeItem('token');
         localStorage.removeItem('usuario');
@@ -293,4 +296,4 @@ function sairSistema() {
         localStorage.removeItem('nome');
         window.location.href = 'login.html';
     }
-}
+};
