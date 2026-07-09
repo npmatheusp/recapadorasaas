@@ -58,9 +58,11 @@ async function carregarDashboard() {
     }
 }
 
+// Inicializa a carga de dados e cria o intervalo de atualização
 carregarDashboard();
 setInterval(carregarDashboard, 5000);
 
+// Escopo global para a função logout chamada pela navbar
 window.logout = function () {
     localStorage.removeItem('token');
     localStorage.removeItem('perfil');
