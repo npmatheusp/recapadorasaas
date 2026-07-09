@@ -29,16 +29,23 @@
 </head>
 <body>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <span class="navbar-brand h1 mb-0 fs-4 fw-bold text-dark">Produção</span>
-        <div class="d-flex gap-2">
-            <!-- Corrigido de btn-outline-light para btn-outline-dark para não sumir no fundo claro -->
-            <a href="dashboard.html" class="btn btn-sm btn-outline-dark">Dashboard</a>
+<!-- Navbar escura padronizada conforme o modelo solicitado -->
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand">
+            Produção
+        </span>
+        <div>
+            <a href="dashboard.html" class="btn btn-sm btn-outline-light">Dashboard</a>
             <a href="producao.html" id="menuPneus" class="btn btn-sm btn-warning fw-bold">Produção</a>
-            <button onclick="sairSistema()" class="btn btn-sm btn-danger">Sair</button>
+            <button onclick="logout()" class="btn btn-sm btn-danger ms-1">
+                Sair
+            </button>
         </div>
     </div>
+</nav>
+
+<div class="container mt-4">
 
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
