@@ -13,14 +13,22 @@
 </head>
 <body>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Entrada de Estoque</h2>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand">
+            Entrada de Estoque
+        </span>
         <div>
-            <a href="dashboard.html" class="btn btn-warning me-2">Dashboard</a>
-            <button onclick="sairSistema()" class="btn btn-danger">Sair</button>
+            <a href="dashboard.html" class="btn btn-sm btn-outline-light">Dashboard</a>
+            <a href="compras.html" id="menuCompras" class="btn btn-sm btn-warning fw-bold">📦 Compras (XML)</a>
+            <button onclick="logout()" class="btn btn-sm btn-danger ms-1">
+                Sair
+            </button>
         </div>
     </div>
+</nav>
+
+<div class="container mt-4">
 
     <div class="card shadow-sm col-md-6 mx-auto">
         <div class="card-header bg-success text-white">
