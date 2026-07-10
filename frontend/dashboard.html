@@ -98,6 +98,10 @@
                     Estoque Pneus Novos
                 </a>
 
+                <a href="precos.html" id="menuPrecos" class="btn btn-sm btn-outline-light">
+                    💰 Tabela de Preços
+                </a>
+
                 <a href="vendas.html" id="menuVendas" class="btn btn-sm btn-outline-light">
                     Lançar Venda
                 </a>
@@ -215,7 +219,7 @@
         }
         if (p === 'PRODUCAO') {
             const style = document.createElement('style');
-            style.innerHTML = '#menuBandas, #menuConsultaPneus, #menuCompras, #menuGerenciarPneus, #menuVendas, #menuRelatorio { display: none !important; }';
+            style.innerHTML = '#menuBandas, #menuConsultaPneus, #menuPrecos, #menuCompras, #menuGerenciarPneus, #menuVendas, #menuRelatorio { display: none !important; }';
             document.head.appendChild(style);
         }
     })();
